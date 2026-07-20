@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>ONELAB — Tạo yêu cầu lấy mẫu</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="logo-dot">OL</div>
+    <div>
+      <div class="brandname">ONELAB</div>
+      <div class="pagetitle">Tạo yêu cầu lấy mẫu</div>
+    </div>
+  </div>
+
+  <div class="card mint">
+    <strong>Dành cho SALES.</strong> Điền đủ thông tin bên dưới, bấm Gửi — hệ thống tự tạo mã booking và chuyển cho CSKH duyệt.
+    <div class="hint" style="margin-top:6px;">Khung giờ booking 06:00–18:00 hằng ngày. Yêu cầu gửi sau 21:00 sẽ được xử lý từ 07:00 sáng hôm sau.</div>
+  </div>
+
+  <div id="confirmScreen" style="display:none;"></div>
+
+  <form id="bookingForm" class="card">
+    <label class="first">Tên khách hàng *</label>
+    <input type="text" id="tenKH" required placeholder="Nguyễn Văn A">
+
+    <label>Số điện thoại *</label>
+    <input type="tel" id="sdt" required placeholder="09xx xxx xxx">
+
+    <label>Địa chỉ (ghi rõ quận/huyện) *</label>
+    <textarea id="diaChi" rows="2" required placeholder="Số nhà, đường, phường/xã, Quận/Huyện..."></textarea>
+
+    <label>Hình thức *</label>
+    <select id="hinhThuc" required>
+      <option value="">-- Chọn --</option>
+      <option>Lấy mẫu tận nhà</option>
+      <option>Thu mẫu tại phòng khám</option>
+    </select>
+
+    <label>Dịch vụ *</label>
+    <input type="text" id="dichVu" required placeholder="VD: Gói tầm soát cơ bản, Xét nghiệm máu tổng quát...">
+
+    <label>Ngày hẹn * <span class="hint" style="display:inline;">(dd/mm/yyyy)</span></label>
+    <input type="text" id="ngayHen" required placeholder="dd/mm/yyyy" inputmode="numeric" maxlength="10">
+    <div class="hint" id="ngayHenErr" style="color:var(--danger);display:none;">Ngày không hợp lệ, nhập theo định dạng dd/mm/yyyy</div>
+
+    <label>Khung giờ *</label>
+    <select id="khungGio" required>
+      <option value="">-- Chọn khung giờ (06:00–18:00) --</option>
+      <option>06:00–07:00</option>
+      <option>07:00–08:00</option>
+      <option>08:00–09:00</option>
+      <option>09:00–10:00</option>
+      <option>10:00–11:00</option>
+      <option>11:00–12:00</option>
+      <option>12:00–13:00</option>
+      <option>13:00–14:00</option>
+      <option>14:00–15:00</option>
+      <option>15:00–16:00</option>
+      <option>16:00–17:00</option>
+      <option>17:00–18:00</option>
+    </select>
+
+    <label>Mức ưu tiên</label>
+    <div class="priority-row">
+      <label class="chip"><input type="radio" name="mucUuTien" value="Thường" checked><span>Thường</span></label>
+      <label class="chip"><input type="radio" name="mucUuTien" value="GẤP"><span>GẤP</span></label>
+      <label class="chip"><input type="radio" name="mucUuTien" value="STAT"><span>STAT</span></label>
+    </div>
+    <div class="hint">Chọn GẤP/STAT để CSKH thấy nổi bật khi duyệt.</div>
+
+    <label>Hình phiếu chỉ định (tối đa 3 ảnh, nếu có)</label>
+    <input type="file" id="chiDinh" accept="image/*" multiple>
+
+    <label>Email nhận thông báo (PIC) *</label>
+    <input type="email" id="emailPIC" required placeholder="ban@onelab.vn">
+    <div class="hint">Email này sẽ nhận thông báo khi booking bị từ chối hoặc hoàn tất.</div>
+
+    <button type="submit" class="btn" id="submitBtn">Gửi yêu cầu</button>
+    <div id="msg"></div>
+  </form>
+
+  <div class="footer-note">ONELAB · Hệ thống booking lấy mẫu · Chỉ dùng nội bộ CSKH/Sales</div>
+</div>
+
+<script src="config.js"></script>
+<script>
+const form = document.getElementById('bookingForm');
+const msg = document.getElementById('msg');
+const submitBtn = document.getElementById('submitBtn');
+
+// Tự động chèn dấu "/" khi gõ ngày dd/mm/yyyy
+const ngayHenInput = document.getElementById('ngayHen');
+ngayHenInput.addEventListener('input', (e) => {
+  let v = e.target.value.replace(/\D/g, '').slice(0, 8);
+  if (v.length >= 5) v = v.slice(0, 2) + '/' + v.slice(2, 4) + '/' + v.slice(4);
+  else if (v.length >= 3) v = v.slice(0, 2) + '/' + v.slice(2);
+  e.target.value = v;
+});
+
+function isValidDDMMYYYY(str) {
+  const m = str.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!m) return false;
+  const d = Number(m[1]), mo = Number(m[2]), y = Number(m[3]);
+  if (mo < 1 || mo > 12) return false;
+  const daysInMonth = new Date(y, mo, 0).getDate();
+  return d >= 1 && d <= daysInMonth;
+}
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const ngayHenErr = document.getElementById('ngayHenErr');
+  if (!isValidDDMMYYYY(ngayHenInput.value.trim())) {
+    ngayHenErr.style.display = 'block';
+    ngayHenInput.focus();
+    return;
+  }
+  ngayHenErr.style.display = 'none';
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Đang gửi...';
+  msg.innerHTML = '';
+
+  try {
+    const filesInput = document.getElementById('chiDinh').files;
+    const files = [];
+    for (let i = 0; i < Math.min(filesInput.length, 3); i++) {
+      const f = filesInput[i];
+      files.push({ name: f.name, mime: f.type || 'image/jpeg', base64: await fileToBase64(f) });
+    }
+
+    const mucUuTien = form.querySelector('input[name=mucUuTien]:checked').value;
+
+    const info = {
+      tenKH: document.getElementById('tenKH').value,
+      sdt: document.getElementById('sdt').value,
+      diaChi: document.getElementById('diaChi').value,
+      hinhThuc: document.getElementById('hinhThuc').value,
+      dichVu: document.getElementById('dichVu').value,
+      ngayHen: document.getElementById('ngayHen').value,
+      khungGio: document.getElementById('khungGio').value,
+      mucUuTien: mucUuTien,
+      emailPIC: document.getElementById('emailPIC').value
+    };
+
+    const res = await callApi('createBooking', Object.assign({}, info, { files: JSON.stringify(files) }));
+
+    if (res.ok) {
+      showConfirmation(res, info);
+      form.reset();
+    } else {
+      msg.innerHTML = `<div class="msg err">Lỗi: ${res.error}</div>`;
+    }
+  } catch (err) {
+    msg.innerHTML = `<div class="msg err">Không gửi được, vui lòng thử lại. (${err})</div>`;
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Gửi yêu cầu';
+  }
+});
+
+function showConfirmation(res, info) {
+  form.style.display = 'none';
+  const c = document.getElementById('confirmScreen');
+  c.style.display = 'block';
+  c.innerHTML = `
+    <div class="card mint" style="text-align:center;">
+      <div style="font-size:34px;line-height:1;">✅</div>
+      <h2 style="margin-top:10px;">Đặt lịch thành công</h2>
+      <div class="hint">Yêu cầu đã được ghi nhận, chuyển CSKH duyệt</div>
+    </div>
+
+    <div class="card" style="text-align:center;">
+      <div class="hint">Mã booking</div>
+      <div style="font-family:Cambria,serif;font-size:26px;font-weight:700;color:var(--green-dark);letter-spacing:0.02em;margin:4px 0 10px;">${res.maBooking}</div>
+      <span class="badge st-1">${res.trangThai}</span>
+    </div>
+
+    <div class="card">
+      <div class="hint" style="margin-bottom:8px;font-weight:700;color:var(--text);">Thông tin đã gửi</div>
+      <div class="confirm-row"><span>Khách hàng</span><strong>${info.tenKH}</strong></div>
+      <div class="confirm-row"><span>SĐT</span><strong>${info.sdt}</strong></div>
+      <div class="confirm-row"><span>Địa chỉ</span><strong>${info.diaChi}</strong></div>
+      <div class="confirm-row"><span>Hình thức</span><strong>${info.hinhThuc}</strong></div>
+      <div class="confirm-row"><span>Dịch vụ</span><strong>${info.dichVu}</strong></div>
+      <div class="confirm-row"><span>Ngày hẹn</span><strong>${info.ngayHen} · ${info.khungGio}</strong></div>
+      <div class="confirm-row"><span>Ưu tiên</span><strong>${info.mucUuTien}</strong></div>
+      <div class="confirm-row"><span>Email nhận báo</span><strong>${info.emailPIC}</strong></div>
+    </div>
+
+    <div class="card" style="background:#FFF3E0;border-color:transparent;">
+      ${res.ghiChu}
+    </div>
+
+    <div class="qbtn-row">
+      <button class="btn secondary" onclick="goLookup('${res.maBooking}')">Tra cứu booking này</button>
+      <button class="btn" onclick="newBooking()">Tạo yêu cầu mới</button>
+    </div>
+  `;
+}
+
+function goLookup(code) {
+  window.location.href = 'tra-cuu.html?ma=' + encodeURIComponent(code);
+}
+function newBooking() {
+  document.getElementById('confirmScreen').style.display = 'none';
+  document.getElementById('confirmScreen').innerHTML = '';
+  form.style.display = 'block';
+  msg.innerHTML = '';
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>ONELAB — Tra cứu booking</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="logo-dot">OL</div>
+    <div>
+      <div class="brandname">ONELAB</div>
+      <div class="pagetitle">Tra cứu booking</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <label class="first">Mã booking</label>
+    <input type="text" id="maBooking" placeholder="LM-260709-1431">
+    <label>hoặc Số điện thoại khách hàng</label>
+    <input type="tel" id="sdt" placeholder="09xx xxx xxx">
+    <button class="btn" id="searchBtn">Tra cứu</button>
+    <div id="msg"></div>
+  </div>
+
+  <div id="results"></div>
+
+  <div class="footer-note">ONELAB · Trạng thái được cập nhật theo thời gian thực từ hệ thống nội bộ.</div>
+</div>
+
+<script src="config.js"></script>
+<script>
+const STEPS = [
+  { st: 1, label: 'Chờ duyệt', who: 'CSKH' },
+  { st: 2, label: 'Đã duyệt', who: 'CSKH' },
+  { st: 3, label: 'Đã điều phối điều dưỡng', who: 'CSKH' },
+  { st: 4, label: 'Đã tiếp nhận, đang đến lấy mẫu', who: 'Điều dưỡng' },
+  { st: 5, label: 'Đã lấy mẫu', who: 'Điều dưỡng' },
+  { st: 6, label: 'Đã bàn giao mẫu cho Logistics', who: 'Điều dưỡng' },
+  { st: 7, label: 'Đã nhập LIS', who: 'Logistics' },
+  { st: 8, label: 'Hoàn tất', who: 'Hệ thống' }
+];
+
+document.getElementById('searchBtn').addEventListener('click', () => doSearch());
+
+async function doSearch() {
+  const maBooking = document.getElementById('maBooking').value.trim();
+  const sdt = document.getElementById('sdt').value.trim();
+  const msg = document.getElementById('msg');
+  const results = document.getElementById('results');
+  results.innerHTML = '';
+  msg.innerHTML = '';
+
+  if (!maBooking && !sdt) {
+    msg.innerHTML = '<div class="msg err">Nhập mã booking hoặc số điện thoại.</div>';
+    return;
+  }
+
+  const res = await callApi('lookupBooking', { maBooking, sdt });
+  if (!res.ok || res.data.length === 0) {
+    msg.innerHTML = '<div class="msg err">Không tìm thấy booking nào.</div>';
+    return;
+  }
+
+  results.innerHTML = res.data.map(renderBooking).join('');
+}
+
+// Tự động tra cứu nếu URL có sẵn ?ma=... (link từ màn hình xác nhận Sales)
+(function autoLookupFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const ma = params.get('ma');
+  if (ma) {
+    document.getElementById('maBooking').value = ma;
+    doSearch();
+  }
+})();
+
+function renderBooking(b) {
+  const isRejected = Number(b.trangThai) === 0;
+  if (isRejected) {
+    return `
+      <div class="card">
+        <div class="top-row" style="display:flex;justify-content:space-between;">
+          <strong>${b.maBooking}</strong>
+          <span class="badge st-0">Từ chối</span>
+        </div>
+        <div class="hint" style="margin-top:8px;">Lý do: ${b.lyDoTuChoi || '(không có)'}</div>
+        <div class="hint">Vui lòng điều chỉnh thông tin và gửi form yêu cầu mới.</div>
+      </div>`;
+  }
+
+  const current = Number(b.trangThai);
+  const stepsHtml = STEPS.map(s => {
+    const cls = s.st < current ? 'done' : s.st === current ? 'current' : '';
+    let meta = '';
+    if (s.st === 1) meta = 'Lúc ' + (b.thoiGianTao || '—');
+    if (s.st === 2) meta = b.nguoiDuyet ? `${b.nguoiDuyet} · ${b.t2Duyet}${b.thoiGianDuKien ? ' · Dự kiến: ' + b.thoiGianDuKien : ''}` : '';
+    if (s.st === 3) meta = b.nguoiPhuTrach ? `Điều dưỡng: ${b.nguoiPhuTrach}${b.t3DieuPhoi ? ' · ' + b.t3DieuPhoi : ''}` : '';
+    if (s.st === 4) meta = b.nguoiTiepNhan ? `${b.nguoiTiepNhan} · ${b.tiepNhan}` : '';
+    if (s.st === 5) meta = b.nguoiLayMau ? `${b.nguoiLayMau} · ${b.daLayMau}` : '';
+    if (s.st === 6) meta = b.nguoiBanGiao ? `${b.nguoiBanGiao} · ${b.banGiao}` : '';
+    if (s.st === 7) meta = b.nguoiNhapLIS ? `PID: ${b.maPID || '—'} · SID: ${b.maSID || '—'} · ${b.nhapLIS}` : '';
+    if (s.st === 8 && b.hoanTat) meta = 'Lúc ' + b.hoanTat;
+    return `<div class="step ${cls}">
+      <div class="dot">${s.st < current ? '✓' : s.st}</div>
+      <div>
+        <div class="steplabel">${s.label}</div>
+        ${meta ? `<div class="stepmeta">${meta}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  return `
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <strong>${b.maBooking}</strong>
+        <span class="badge st-${current}">${b.trangThaiLabel}</span>
+      </div>
+      <div class="hint" style="margin-top:6px;">${b.tenKH} · ${b.dichVu}</div>
+      <div class="steps">${stepsHtml}</div>
+    </div>`;
+}
+</script>
+</body>
+</html>

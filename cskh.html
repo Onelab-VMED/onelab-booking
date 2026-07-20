@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>ONELAB — CSKH</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="logo-dot">OL</div>
+    <div>
+      <div class="brandname">ONELAB</div>
+      <div class="pagetitle">CSKH — Duyệt &amp; điều phối</div>
+    </div>
+  </div>
+
+  <div class="card" id="pinCard">
+    <label class="first">Mã PIN CSKH</label>
+    <input type="password" id="pin" inputmode="numeric" placeholder="••••">
+    <button class="btn" id="loadBtn">Vào danh sách</button>
+    <div id="loginMsg"></div>
+  </div>
+
+  <div id="queue"></div>
+</div>
+
+<script src="config.js"></script>
+<script>
+let PIN = '';
+let NURSES = [];
+let knownCodes = new Set();
+let pollTimer = null;
+
+document.getElementById('loadBtn').addEventListener('click', () => loadQueue(true));
+
+async function loadQueue(isFirstLoad) {
+  PIN = document.getElementById('pin').value.trim();
+  const loginMsg = document.getElementById('loginMsg');
+  loginMsg.innerHTML = '';
+  if (!PIN) return;
+
+  const [res, nurseRes] = await Promise.all([
+    callApi('listQueue', { role: 'cskh', pin: PIN }),
+    callApi('listNurses', {})
+  ]);
+  if (!res.ok) {
+    loginMsg.innerHTML = `<div class="msg err">${res.error}</div>`;
+    return;
+  }
+  NURSES = nurseRes.ok ? nurseRes.data : [];
+  loginMsg.innerHTML = `<div class="msg ok">Xin chào ${res.who}</div>`;
+  checkNewBookings(res.data);
+  renderQueue(res.data);
+
+  if (isFirstLoad) {
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(() => loadQueue(false), 20000); // tự kiểm tra mỗi 20 giây
+    if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
+  }
+}
+
+function checkNewBookings(list) {
+  const currentCodes = new Set(list.map(b => b.maBooking + ':' + b.trangThai));
+  if (knownCodes.size > 0) {
+    const newOnes = list.filter(b => !Array.from(knownCodes).some(k => k.startsWith(b.maBooking + ':')));
+    if (newOnes.length > 0) alertNewBooking(newOnes.length + ' booking mới cần duyệt');
+  }
+  knownCodes = currentCodes;
+}
+
+function alertNewBooking(text) {
+  playBeep();
+  document.title = '🔔 ' + text;
+  setTimeout(() => { document.title = 'ONELAB — CSKH'; }, 8000);
+  if ('Notification' in window && Notification.permission === 'granted') {
+    new Notification('ONELAB CSKH', { body: text });
+  }
+}
+
+function playBeep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.frequency.value = 880; g.gain.value = 0.15;
+    o.start(); setTimeout(() => o.stop(), 220);
+  } catch (e) {}
+}
+
+function renderQueue(list) {
+  const q = document.getElementById('queue');
+  if (list.length === 0) {
+    q.innerHTML = '<div class="card mint">Không có booking nào đang chờ xử lý. 🎉</div>';
+    return;
+  }
+  q.innerHTML = list.map(itemHtml).join('');
+}
+
+function itemHtml(b) {
+  const isPriority = b.mucUuTien && b.mucUuTien !== 'Thường';
+  const waitingApprove = Number(b.trangThai) === 1;
+  return `
+  <div class="card" style="${isPriority ? 'border-color:#C0392B;' : ''}">
+    <div style="display:flex;justify-content:space-between;">
+      <strong>${b.maBooking}</strong>
+      ${isPriority ? `<span class="badge st-0">${b.mucUuTien}</span>` : ''}
+    </div>
+    <div class="hint" style="margin-top:4px;">
+      ${b.tenKH} · ${b.sdt}<br>${b.diaChi}<br>${b.dichVu} · ${b.hinhThuc}<br>Hẹn: ${b.ngayHen} ${b.khungGio}<br>Tạo lúc: ${b.thoiGianTao}
+    </div>
+
+    ${waitingApprove ? `
+      <label>Thời gian dự kiến lấy mẫu</label>
+      <input type="text" id="eta-${b.maBooking}" placeholder="VD: 14:00 hôm nay">
+      <div class="qbtn-row" style="margin-top:12px;">
+        <button class="btn" onclick="approve('${b.maBooking}')">Duyệt</button>
+        <button class="btn danger" onclick="reject('${b.maBooking}')">Từ chối</button>
+      </div>
+    ` : `
+      <label>Điều dưỡng phụ trách</label>
+      <select id="nurse-${b.maBooking}">
+        <option value="">-- Chọn điều dưỡng --</option>
+        ${NURSES.map(n => `<option value="${n}">${n}</option>`).join('')}
+      </select>
+      <button class="btn" onclick="assign('${b.maBooking}')">Điều phối</button>
+    `}
+    <div id="msg-${b.maBooking}"></div>
+  </div>`;
+}
+
+async function approve(code) {
+  const eta = document.getElementById('eta-' + code).value;
+  const res = await callApi('approveBooking', { maBooking: code, pin: PIN, thoiGianDuKien: eta });
+  showMsg(code, res);
+  if (res.ok) loadQueue();
+}
+
+async function reject(code) {
+  const lyDo = prompt('Lý do từ chối:');
+  if (lyDo === null) return;
+  const res = await callApi('rejectBooking', { maBooking: code, pin: PIN, lyDo });
+  showMsg(code, res);
+  if (res.ok) loadQueue();
+}
+
+async function assign(code) {
+  const ten = document.getElementById('nurse-' + code).value;
+  const res = await callApi('assignNurse', { maBooking: code, pin: PIN, tenDieuDuong: ten });
+  showMsg(code, res);
+  if (res.ok) loadQueue();
+}
+
+function showMsg(code, res) {
+  const el = document.getElementById('msg-' + code);
+  if (!el) return;
+  el.innerHTML = res.ok
+    ? `<div class="msg ok">${res.message}</div>`
+    : `<div class="msg err">${res.error}</div>`;
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>ONELAB — Logistics</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="logo-dot">OL</div>
+    <div>
+      <div class="brandname">ONELAB</div>
+      <div class="pagetitle">Logistics — Nhập LIS</div>
+    </div>
+  </div>
+
+  <div class="card" id="pinCard">
+    <label class="first">Mã PIN Logistics</label>
+    <input type="password" id="pin" inputmode="numeric" placeholder="••••">
+    <button class="btn" id="loadBtn">Vào danh sách</button>
+    <div id="loginMsg"></div>
+  </div>
+
+  <div id="queue"></div>
+</div>
+
+<script src="config.js"></script>
+<script>
+let PIN = '';
+let knownCodes = new Set();
+let pollTimer = null;
+
+document.getElementById('loadBtn').addEventListener('click', () => loadQueue(true));
+
+async function loadQueue(isFirstLoad) {
+  PIN = document.getElementById('pin').value.trim();
+  const loginMsg = document.getElementById('loginMsg');
+  loginMsg.innerHTML = '';
+  if (!PIN) return;
+
+  const res = await callApi('listQueue', { role: 'logistics', pin: PIN });
+  if (!res.ok) {
+    loginMsg.innerHTML = `<div class="msg err">${res.error}</div>`;
+    return;
+  }
+  loginMsg.innerHTML = `<div class="msg ok">Xin chào ${res.who}</div>`;
+  checkNewBookings(res.data);
+  renderQueue(res.data);
+
+  if (isFirstLoad) {
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(() => loadQueue(false), 20000);
+    if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
+  }
+}
+
+function checkNewBookings(list) {
+  const currentCodes = new Set(list.map(b => b.maBooking + ':' + b.trangThai));
+  if (knownCodes.size > 0) {
+    const newOnes = list.filter(b => !Array.from(knownCodes).some(k => k.startsWith(b.maBooking + ':')));
+    if (newOnes.length > 0) alertNewBooking(newOnes.length + ' mẫu mới chờ nhập LIS');
+  }
+  knownCodes = currentCodes;
+}
+
+function alertNewBooking(text) {
+  playBeep();
+  document.title = '🔔 ' + text;
+  setTimeout(() => { document.title = 'ONELAB — Logistics'; }, 8000);
+  if ('Notification' in window && Notification.permission === 'granted') {
+    new Notification('ONELAB Logistics', { body: text });
+  }
+}
+
+function playBeep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.frequency.value = 880; g.gain.value = 0.15;
+    o.start(); setTimeout(() => o.stop(), 220);
+  } catch (e) {}
+}
+
+function renderQueue(list) {
+  const q = document.getElementById('queue');
+  if (list.length === 0) {
+    q.innerHTML = '<div class="card mint">Không có mẫu nào đang chờ nhập LIS. 🎉</div>';
+    return;
+  }
+  q.innerHTML = list.map(itemHtml).join('');
+}
+
+function itemHtml(b) {
+  return `
+  <div class="card">
+    <strong>${b.maBooking}</strong>
+    <div class="hint" style="margin-top:4px;">${b.tenKH} · ${b.dichVu}<br>Bàn giao lúc: ${b.banGiao || '—'} (bởi ${b.nguoiBanGiao || '—'})</div>
+    <label>Mã PID</label>
+    <input type="text" id="pid-${b.maBooking}" placeholder="VD: 10231">
+    <label>Mã SID</label>
+    <input type="text" id="sid-${b.maBooking}" placeholder="VD: 55892">
+    <button class="btn" onclick="finish('${b.maBooking}')">Hoàn tất</button>
+    <div id="msg-${b.maBooking}"></div>
+  </div>`;
+}
+
+async function finish(code) {
+  const maPID = document.getElementById('pid-' + code).value;
+  const maSID = document.getElementById('sid-' + code).value;
+  const res = await callApi('enterSID', { maBooking: code, pin: PIN, maPID, maSID });
+  const el = document.getElementById('msg-' + code);
+  el.innerHTML = res.ok ? `<div class="msg ok">${res.message}</div>` : `<div class="msg err">${res.error}</div>`;
+  if (res.ok) loadQueue();
+}
+</script>
+</body>
+</html>
