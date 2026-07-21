@@ -43,6 +43,14 @@ const STEPS = [
   { st: 8, label: 'Hoàn tất', who: 'Hệ thống' }
 ];
 
+// Luồng THU MẪU chỉ có Sales <-> Logistics — không qua CSKH/Điều dưỡng
+const THU_MAU_STEPS = [
+  { key: 20, label: 'Đã tạo booking', who: 'Sales' },
+  { key: 21, label: 'Logistics tiếp nhận, đang thu mẫu', who: 'Logistics' },
+  { key: 8, label: 'Hoàn tất', who: 'Logistics' }
+];
+const THU_MAU_ORDER = { 20: 1, 21: 2, 8: 3 };
+
 document.getElementById('searchBtn').addEventListener('click', () => doSearch());
 
 async function doSearch() {
@@ -91,32 +99,54 @@ function renderBooking(b) {
       </div>`;
   }
 
+  const isThuMau = b.hinhThuc === 'Thu mẫu';
   const current = Number(b.trangThai);
-  const stepsHtml = STEPS.map(s => {
-    const cls = s.st < current ? 'done' : s.st === current ? 'current' : '';
-    let meta = '';
-    if (s.st === 1) meta = 'Lúc ' + (b.thoiGianTao || '—');
-    if (s.st === 2) meta = b.nguoiDuyet ? `${b.nguoiDuyet} · ${b.t2Duyet}${b.thoiGianDuKien ? ' · Dự kiến: ' + b.thoiGianDuKien : ''}` : '';
-    if (s.st === 3) meta = b.nguoiPhuTrach ? `Điều dưỡng: ${b.nguoiPhuTrach}${b.t3DieuPhoi ? ' · ' + b.t3DieuPhoi : ''}` : '';
-    if (s.st === 4) meta = b.nguoiTiepNhan ? `${b.nguoiTiepNhan} · ${b.tiepNhan}` : '';
-    if (s.st === 5) meta = b.nguoiLayMau ? `${b.nguoiLayMau} · ${b.daLayMau}` : '';
-    if (s.st === 6) meta = b.nguoiBanGiao ? `${b.nguoiBanGiao} · ${b.banGiao}` : '';
-    if (s.st === 7) meta = b.nguoiNhapLIS ? `PID: ${b.maPID || '—'} · SID: ${b.maSID || '—'} · ${b.nhapLIS}` : '';
-    if (s.st === 8 && b.hoanTat) meta = 'Lúc ' + b.hoanTat;
-    return `<div class="step ${cls}">
-      <div class="dot">${s.st < current ? '✓' : s.st}</div>
-      <div>
-        <div class="steplabel">${s.label}</div>
-        ${meta ? `<div class="stepmeta">${meta}</div>` : ''}
-      </div>
-    </div>`;
-  }).join('');
+  let stepsHtml;
+
+  if (isThuMau) {
+    const currentOrder = THU_MAU_ORDER[current] || 0;
+    stepsHtml = THU_MAU_STEPS.map(s => {
+      const ord = THU_MAU_ORDER[s.key];
+      const cls = ord < currentOrder ? 'done' : ord === currentOrder ? 'current' : '';
+      let meta = '';
+      if (s.key === 20) meta = 'Lúc ' + (b.thoiGianTao || '—');
+      if (s.key === 21) meta = b.nguoiTiepNhan ? `${b.nguoiTiepNhan} · ${b.tiepNhan}` : '';
+      if (s.key === 8 && b.hoanTat) meta = `PID: ${b.maPID || '—'} · SID: ${b.maSID || '—'} · ${b.hoanTat}`;
+      return `<div class="step ${cls}">
+        <div class="dot">${ord < currentOrder ? '✓' : ord}</div>
+        <div>
+          <div class="steplabel">${s.label}</div>
+          ${meta ? `<div class="stepmeta">${meta}</div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  } else {
+    stepsHtml = STEPS.map(s => {
+      const cls = s.st < current ? 'done' : s.st === current ? 'current' : '';
+      let meta = '';
+      if (s.st === 1) meta = 'Lúc ' + (b.thoiGianTao || '—');
+      if (s.st === 2) meta = b.nguoiDuyet ? `${b.nguoiDuyet} · ${b.t2Duyet}${b.thoiGianDuKien ? ' · Dự kiến: ' + b.thoiGianDuKien : ''}` : '';
+      if (s.st === 3) meta = b.nguoiPhuTrach ? `Điều dưỡng: ${b.nguoiPhuTrach}${b.t3DieuPhoi ? ' · ' + b.t3DieuPhoi : ''}` : '';
+      if (s.st === 4) meta = b.nguoiTiepNhan ? `${b.nguoiTiepNhan} · ${b.tiepNhan}` : '';
+      if (s.st === 5) meta = b.nguoiLayMau ? `${b.nguoiLayMau} · ${b.daLayMau}` : '';
+      if (s.st === 6) meta = b.nguoiBanGiao ? `${b.nguoiBanGiao} · ${b.banGiao}` : '';
+      if (s.st === 7) meta = b.nguoiNhapLIS ? `PID: ${b.maPID || '—'} · SID: ${b.maSID || '—'} · ${b.nhapLIS}` : '';
+      if (s.st === 8 && b.hoanTat) meta = 'Lúc ' + b.hoanTat;
+      return `<div class="step ${cls}">
+        <div class="dot">${s.st < current ? '✓' : s.st}</div>
+        <div>
+          <div class="steplabel">${s.label}</div>
+          ${meta ? `<div class="stepmeta">${meta}</div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  }
 
   return `
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <strong>${b.maBooking}</strong>
-        <span class="badge st-${current}">${b.trangThaiLabel}</span>
+        <span class="badge st-${current === 20 ? 1 : current === 21 ? 6 : current}">${b.trangThaiLabel}</span>
       </div>
       <div class="hint" style="margin-top:6px;">${b.tenKH} · ${b.dichVu}${b.maBacSi ? ' · Mã BS: ' + b.maBacSi : ''}</div>
       ${b.hinhThucTraKQ ? `<div class="hint">Trả kết quả: ${b.hinhThucTraKQ}</div>` : ''}

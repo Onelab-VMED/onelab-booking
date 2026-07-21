@@ -104,6 +104,10 @@
       <option>Email bác sĩ</option>
     </select>
 
+    <label>Email nhận kết quả <span class="hint" style="display:inline;">(nếu trả kết quả qua email)</span></label>
+    <input type="email" id="emailKetQua" placeholder="email-nhan-ket-qua@vidu.com">
+    <div class="hint">Dùng khi Hình thức trả kết quả là Email KH/BS — CSKH/Logistics sẽ dùng email này để lên phiếu order.</div>
+
     <label>Mã bác sĩ <span class="hint" style="display:inline;">(nếu có)</span></label>
     <input type="text" id="maBacSi" placeholder="VD: 0426_0006">
     <div class="hint" id="maBacSiErr" style="color:var(--danger);display:none;">Định dạng mã bác sĩ phải dạng số_số, VD: 0421_0000</div>
@@ -332,6 +336,7 @@ form.addEventListener('submit', async (e) => {
       mucUuTien: mucUuTien,
       emailPIC: document.getElementById('emailPIC').value,
       hinhThucTraKQ: document.getElementById('hinhThucTraKQ').value,
+      emailKetQua: document.getElementById('emailKetQua').value.trim(),
       maBacSi: maBacSiVal,
       ghiChuSale: document.getElementById('ghiChuSale').value.trim()
     };
@@ -399,6 +404,7 @@ form.addEventListener('submit', async (e) => {
   document.getElementById('khungGio').value = b.khungGio || '';
   document.getElementById('emailPIC').value = b.emailPIC || '';
   document.getElementById('hinhThucTraKQ').value = b.hinhThucTraKQ || '';
+  document.getElementById('emailKetQua').value = b.emailKetQua || '';
   document.getElementById('maBacSi').value = b.maBacSi || '';
   document.getElementById('ghiChuSale').value = b.ghiChu || '';
   const priRadio = form.querySelector(`input[name=mucUuTien][value="${b.mucUuTien}"]`);
@@ -458,6 +464,7 @@ function showConfirmation(res, info) {
       <div class="confirm-row"><span>Email nhận báo</span><strong>${info.emailPIC}</strong></div>
       ${info.ngaySinh ? `<div class="confirm-row"><span>Ngày sinh KH</span><strong>${info.ngaySinh}</strong></div>` : ''}
       ${info.hinhThucTraKQ ? `<div class="confirm-row"><span>Trả kết quả</span><strong>${info.hinhThucTraKQ}</strong></div>` : ''}
+      ${info.emailKetQua ? `<div class="confirm-row"><span>Email nhận KQ</span><strong>${info.emailKetQua}</strong></div>` : ''}
       ${info.maBacSi ? `<div class="confirm-row"><span>Mã bác sĩ</span><strong>${info.maBacSi}</strong></div>` : ''}
       ${info.ghiChuSale ? `<div class="confirm-row"><span>Ghi chú</span><strong>${info.ghiChuSale}</strong></div>` : ''}
     </div>

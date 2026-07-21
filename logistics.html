@@ -126,11 +126,14 @@ function itemHtml(b) {
   const isPriority = b.mucUuTien && b.mucUuTien !== 'Thường';
   const chiDinhList = (b.chiDinhLinks || '').split(',').map(s => s.trim()).filter(Boolean);
   const billList = (b.billLinks || '').split(',').map(s => s.trim()).filter(Boolean);
+  const st = Number(b.trangThai);
+  const waitingReceive = st === 20; // Thu mẫu — chờ Logistics xác nhận tiếp nhận
+
   return `
   <div class="card" style="${isPriority ? 'border-color:#C0392B;' : ''}">
     <div style="display:flex;justify-content:space-between;align-items:center;">
       <strong>${b.maBooking}</strong>
-      ${isPriority ? `<span class="badge st-0">${b.mucUuTien}</span>` : ''}
+      ${isPriority ? `<span class="badge st-0">${b.mucUuTien}</span>` : `<span class="badge st-1">${b.trangThaiLabel}</span>`}
     </div>
 
     <div class="hint" style="margin-top:6px;">
@@ -145,6 +148,7 @@ function itemHtml(b) {
     </div>
 
     ${b.maBacSi ? `<div class="hint" style="margin-top:8px;">Mã bác sĩ: <strong style="color:var(--text);">${b.maBacSi}</strong></div>` : ''}
+    ${b.hinhThucTraKQ ? `<div class="hint" style="margin-top:4px;">Trả KQ: <strong style="color:var(--text);">${b.hinhThucTraKQ}</strong>${b.emailKetQua ? ' — ' + b.emailKetQua : ''}</div>` : ''}
     ${b.ghiChu ? `<div class="hint" style="margin-top:6px;font-style:italic;">Ghi chú Sale: ${b.ghiChu}</div>` : ''}
 
     ${chiDinhList.length > 0 ? `
@@ -156,15 +160,29 @@ function itemHtml(b) {
         ${billList.map((l, i) => `<a href="${l}" target="_blank" rel="noopener">File ${i + 1}</a>`).join(' · ')}
       </div>` : ''}
 
-    <div class="hint" style="margin-top:8px;">Bàn giao lúc: ${b.banGiao || '—'} (bởi ${b.nguoiBanGiao || '—'})</div>
-
-    <label style="margin-top:12px;">Mã PID</label>
-    <input type="text" id="pid-${b.maBooking}" placeholder="VD: 10231">
-    <label>Mã SID</label>
-    <input type="text" id="sid-${b.maBooking}" placeholder="VD: 55892">
-    <button class="btn" onclick="finish('${b.maBooking}')">Hoàn tất</button>
+    ${waitingReceive ? `
+      <button class="btn" style="margin-top:14px;" onclick="confirmReceive('${b.maBooking}')">Xác nhận thu mẫu</button>
+    ` : `
+      <div class="hint" style="margin-top:8px;">
+        ${st === 21
+          ? `Tiếp nhận lúc: ${b.tiepNhan || '—'} (bởi ${b.nguoiTiepNhan || '—'})`
+          : `Bàn giao lúc: ${b.banGiao || '—'} (bởi ${b.nguoiBanGiao || '—'})`}
+      </div>
+      <label style="margin-top:12px;">Mã PID</label>
+      <input type="text" id="pid-${b.maBooking}" placeholder="VD: 10231">
+      <label>Mã SID</label>
+      <input type="text" id="sid-${b.maBooking}" placeholder="VD: 55892">
+      <button class="btn" onclick="finish('${b.maBooking}')">Hoàn tất</button>
+    `}
     <div id="msg-${b.maBooking}"></div>
   </div>`;
+}
+
+async function confirmReceive(code) {
+  const res = await callApi('confirmThuMau', { maBooking: code, pin: PIN });
+  const el = document.getElementById('msg-' + code);
+  el.innerHTML = res.ok ? `<div class="msg ok">${res.message}</div>` : `<div class="msg err">${res.error}</div>`;
+  if (res.ok) loadQueue();
 }
 
 async function finish(code) {
