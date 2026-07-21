@@ -118,7 +118,8 @@ function renderBooking(b) {
         <strong>${b.maBooking}</strong>
         <span class="badge st-${current}">${b.trangThaiLabel}</span>
       </div>
-      <div class="hint" style="margin-top:6px;">${b.tenKH} · ${b.dichVu}</div>
+      <div class="hint" style="margin-top:6px;">${b.tenKH} · ${b.dichVu}${b.maBacSi ? ' · Mã BS: ' + b.maBacSi : ''}</div>
+      ${b.ghiChu ? `<div class="hint" style="font-style:italic;">Ghi chú: ${b.ghiChu}</div>` : ''}
       <div class="steps">${stepsHtml}</div>
       ${renderBillLinks(b.billLinks)}
     </div>`;

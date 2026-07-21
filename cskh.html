@@ -57,10 +57,16 @@ async function loadQueue(isFirstLoad) {
   loginMsg.innerHTML = '';
   if (!PIN) return;
 
-  const [res, nurseRes] = await Promise.all([
-    callApi('listQueue', { role: 'cskh', pin: PIN }),
-    callApi('listNurses', {})
-  ]);
+  let res, nurseRes;
+  try {
+    [res, nurseRes] = await Promise.all([
+      callApi('listQueue', { role: 'cskh', pin: PIN }),
+      callApi('listNurses', {})
+    ]);
+  } catch (err) {
+    loginMsg.innerHTML = `<div class="msg err">Không kết nối được hệ thống. Kiểm tra lại config.js (URL Apps Script) hoặc mạng internet. (${err})</div>`;
+    return;
+  }
   if (!res.ok) {
     loginMsg.innerHTML = `<div class="msg err">${res.error}</div>`;
     return;
@@ -134,6 +140,7 @@ function itemHtml(b) {
     <div class="hint" style="margin-top:4px;">
       ${b.tenKH} · ${b.sdt}<br>${b.diaChi}<br>${b.dichVu} · ${b.hinhThuc}<br>Hẹn: ${b.ngayHen} ${b.khungGio}<br>Tạo lúc: ${b.thoiGianTao}
     </div>
+    ${b.ghiChu ? `<div class="hint" style="margin-top:6px;font-style:italic;">Ghi chú Sale: ${b.ghiChu}</div>` : ''}
 
     ${waitingApprove ? `
       <label>Thời gian dự kiến lấy mẫu</label>
@@ -143,18 +150,20 @@ function itemHtml(b) {
         <button class="btn danger" onclick="reject('${b.maBooking}')">Từ chối</button>
       </div>
     ` : `
-      <label>Điều dưỡng phụ trách</label>
+      <div class="card mint" style="margin-top:14px;padding:12px 14px;">
+        <div class="hint" style="font-weight:700;color:var(--text);margin-bottom:6px;">Bước 1 (tuỳ chọn) — Tải hoá đơn/bill trước khi điều phối</div>
+        ${b.billLinks ? `<div class="hint" style="margin-bottom:6px;">Đã có ${b.billLinks.split(',').length} file — <a href="#" onclick="event.preventDefault(); alert('${b.billLinks.replace(/'/g, "")}')">xem link</a></div>` : ''}
+        <input type="file" id="bill-${b.maBooking}" accept="image/*,.pdf" multiple>
+        <button class="btn secondary" onclick="uploadBill('${b.maBooking}')">Tải hoá đơn lên</button>
+      </div>
+
+      <label style="margin-top:14px;">Bước 2 — Điều dưỡng phụ trách</label>
       <select id="nurse-${b.maBooking}">
         <option value="">-- Chọn điều dưỡng --</option>
         ${NURSES.map(n => `<option value="${n}">${n}</option>`).join('')}
       </select>
       <button class="btn" onclick="assign('${b.maBooking}')">Điều phối</button>
     `}
-
-    <label style="margin-top:16px;">Hoá đơn / Bill (để Sales xem khi tra cứu)</label>
-    ${b.billLinks ? `<div class="hint">Đã có ${b.billLinks.split(',').length} file — <a href="#" onclick="event.preventDefault(); alert('${b.billLinks.replace(/'/g, "")}')">xem link</a></div>` : ''}
-    <input type="file" id="bill-${b.maBooking}" accept="image/*,.pdf" multiple>
-    <button class="btn secondary" onclick="uploadBill('${b.maBooking}')">Tải hoá đơn lên</button>
     <div id="msg-${b.maBooking}"></div>
   </div>`;
 }

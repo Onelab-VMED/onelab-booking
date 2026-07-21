@@ -320,3 +320,60 @@ button.btn:disabled { opacity: 0.5; }
   line-height: 1;
 }
 .chip-x:hover { background: var(--danger); }
+
+/* ===== MÀN HÌNH MÁY TÍNH (desktop) — phóng to chữ + mở rộng khung cho dễ đọc ===== */
+@media (min-width: 720px) {
+  body { font-size: 17px; }
+  .wrap { max-width: 660px; padding: 40px 40px 70px; }
+
+  .topbar { gap: 14px; margin-bottom: 26px; }
+  .topbar .logo-dot { width: 44px; height: 44px; border-radius: 12px; font-size: 19px; }
+  .topbar .brandname { font-size: 13px; }
+  .topbar .pagetitle { font-size: 23px; }
+
+  h1, h2, h3 { font-size: 1.2em; }
+  .card { padding: 24px 26px; margin-bottom: 18px; }
+
+  label { font-size: 15.5px; margin: 18px 0 8px; }
+  input, select, textarea {
+    padding: 14px 16px;
+    font-size: 16.5px;
+    border-radius: 12px;
+  }
+  textarea { min-height: 70px; }
+
+  .hint { font-size: 13.5px; }
+  .priority-row label.chip { padding: 13px 8px; font-size: 14.5px; }
+
+  button.btn { padding: 16px; font-size: 17px; border-radius: 14px; margin-top: 22px; }
+
+  .badge { font-size: 13px; padding: 5px 13px; }
+
+  .steps { margin: 20px 0 6px; }
+  .step { gap: 16px; padding-bottom: 22px; }
+  .step .dot { width: 26px; height: 26px; font-size: 13px; }
+  .step:not(:last-child)::before { left: 12.5px; top: 26px; }
+  .step .steplabel { font-size: 15.5px; }
+  .step .stepmeta { font-size: 13.5px; }
+
+  .role-card { padding: 20px; }
+  .role-card .rtitle { font-size: 17px; }
+  .role-card .rdesc { font-size: 14px; }
+
+  .msg { padding: 14px 16px; font-size: 15px; }
+
+  .list-item { padding: 16px; }
+  .list-item .code { font-size: 16px; }
+  .list-item .meta { font-size: 13.5px; }
+
+  .confirm-row { padding: 9px 0; font-size: 15px; }
+
+  .suggestion-item { padding: 13px 16px; font-size: 15px; }
+  .suggestion-price { font-size: 13.5px; }
+  .suggestion-empty { padding: 13px 16px; font-size: 14px; }
+
+  .test-chip { font-size: 14px; padding: 8px 10px 8px 14px; }
+  .chip-x { width: 20px; height: 20px; font-size: 13px; }
+
+  .footer-note { font-size: 12.5px; margin-top: 28px; }
+}

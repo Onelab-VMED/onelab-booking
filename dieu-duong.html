@@ -80,7 +80,15 @@ async function loadQueue(isFirstLoad) {
   loginMsg.innerHTML = '';
   if (!PIN) return;
 
-  const res = await callApi('listQueue', { role: 'dieuduong', pin: PIN });
+  let res;
+  try {
+    res = await callApi('listQueue', { role: 'dieuduong', pin: PIN });
+  } catch (err) {
+    document.getElementById('pinCard').style.display = 'block';
+    document.getElementById('switchUserBox').style.display = 'none';
+    document.getElementById('queue').innerHTML = `<div class="msg err">Không kết nối được hệ thống. Kiểm tra lại config.js (URL Apps Script) hoặc mạng internet. (${err})</div>`;
+    return;
+  }
   if (!res.ok) {
     loginMsg.innerHTML = `<div class="msg err">${res.error}</div>`;
     document.getElementById('pinCard').style.display = 'block'; // PIN lưu bị sai -> hiện lại form nhập
@@ -151,6 +159,11 @@ function itemHtml(b) {
     <div class="hint" style="margin-top:4px;">
       ${b.tenKH} · ${b.sdt}<br>${b.diaChi}<br>Hẹn: ${b.ngayHen} ${b.khungGio}<br>Dự kiến: ${b.thoiGianDuKien || '—'}<br>Điều phối lúc: ${b.t3DieuPhoi || '—'}
     </div>
+    <div class="card mint" style="margin-top:10px;padding:10px 14px;">
+      <div class="hint" style="font-weight:700;color:var(--text);margin-bottom:4px;">Xét nghiệm cần chuẩn bị vật tư</div>
+      <div style="font-size:13px;color:var(--text);">${b.dichVu || '—'}</div>
+    </div>
+    ${b.ghiChu ? `<div class="hint" style="margin-top:8px;font-style:italic;">Ghi chú Sale: ${b.ghiChu}</div>` : ''}
     ${next ? `<button class="btn" onclick="update('${b.maBooking}','${next.step}')">${next.label}</button>` : ''}
     <div id="msg-${b.maBooking}"></div>
   </div>`;

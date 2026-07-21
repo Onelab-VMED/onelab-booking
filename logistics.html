@@ -55,7 +55,13 @@ async function loadQueue(isFirstLoad) {
   loginMsg.innerHTML = '';
   if (!PIN) return;
 
-  const res = await callApi('listQueue', { role: 'logistics', pin: PIN });
+  let res;
+  try {
+    res = await callApi('listQueue', { role: 'logistics', pin: PIN });
+  } catch (err) {
+    loginMsg.innerHTML = `<div class="msg err">Không kết nối được hệ thống. Kiểm tra lại config.js (URL Apps Script) hoặc mạng internet. (${err})</div>`;
+    return;
+  }
   if (!res.ok) {
     loginMsg.innerHTML = `<div class="msg err">${res.error}</div>`;
     return;

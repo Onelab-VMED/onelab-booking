@@ -85,6 +85,12 @@
     <input type="email" id="emailPIC" required placeholder="ban@onelab.vn">
     <div class="hint">Email này sẽ nhận thông báo khi booking bị từ chối hoặc hoàn tất.</div>
 
+    <label>Mã bác sĩ <span class="hint" style="display:inline;">(để tính hoa hồng, nếu có)</span></label>
+    <input type="text" id="maBacSi" placeholder="VD: 0426_0006">
+
+    <label>Ghi chú <span class="hint" style="display:inline;">(nếu có)</span></label>
+    <textarea id="ghiChuSale" rows="2" placeholder="VD: Khách yêu cầu gọi trước 15 phút, nhà có chó dữ..."></textarea>
+
     <button type="submit" class="btn" id="submitBtn">Gửi yêu cầu</button>
     <div id="msg"></div>
   </form>
@@ -236,7 +242,9 @@ form.addEventListener('submit', async (e) => {
       ngayHen: document.getElementById('ngayHen').value,
       khungGio: document.getElementById('khungGio').value,
       mucUuTien: mucUuTien,
-      emailPIC: document.getElementById('emailPIC').value
+      emailPIC: document.getElementById('emailPIC').value,
+      maBacSi: document.getElementById('maBacSi').value.trim(),
+      ghiChuSale: document.getElementById('ghiChuSale').value.trim()
     };
 
     const res = await callApi('createBooking', Object.assign({}, info, { files: JSON.stringify(files) }));
@@ -282,6 +290,8 @@ function showConfirmation(res, info) {
       <div class="confirm-row"><span>Ngày hẹn</span><strong>${info.ngayHen} · ${info.khungGio}</strong></div>
       <div class="confirm-row"><span>Ưu tiên</span><strong>${info.mucUuTien}</strong></div>
       <div class="confirm-row"><span>Email nhận báo</span><strong>${info.emailPIC}</strong></div>
+      ${info.maBacSi ? `<div class="confirm-row"><span>Mã bác sĩ</span><strong>${info.maBacSi}</strong></div>` : ''}
+      ${info.ghiChuSale ? `<div class="confirm-row"><span>Ghi chú</span><strong>${info.ghiChuSale}</strong></div>` : ''}
     </div>
 
     <div class="card" style="background:#FFF3E0;border-color:transparent;">
