@@ -16,9 +16,16 @@
     </div>
   </div>
 
-  <div class="card mint">
+  <div class="card mint" id="normalIntro">
     <strong>Dành cho SALES.</strong> Điền đủ thông tin bên dưới, bấm Gửi — hệ thống tự tạo mã booking và chuyển cho CSKH duyệt.
     <div class="hint" style="margin-top:6px;">Khung giờ booking 06:00–18:00 hằng ngày. Yêu cầu gửi sau 21:00 sẽ được xử lý từ 07:00 sáng hôm sau.</div>
+  </div>
+
+  <div class="card" id="editIntro" style="display:none;background:#FFF3E0;border-color:transparent;">
+    <strong style="color:var(--hn-orange, #EF6C00);">Đang chỉnh sửa booking bị từ chối</strong>
+    <div class="hint" style="margin-top:6px;">Mã: <strong id="editCode" style="color:var(--text);"></strong></div>
+    <div class="hint">Lý do từ chối: <span id="editReason" style="color:var(--text);"></span></div>
+    <div class="hint" style="margin-top:6px;">Chỉnh lại phần bị từ chối rồi bấm "Cập nhật yêu cầu" — không cần nhập lại từ đầu.</div>
   </div>
 
   <div id="confirmScreen" style="display:none;"></div>
@@ -32,6 +39,10 @@
 
     <label>Địa chỉ (ghi rõ quận/huyện) *</label>
     <textarea id="diaChi" rows="2" required placeholder="Số nhà, đường, phường/xã, Quận/Huyện..."></textarea>
+
+    <label>Ngày sinh khách hàng <span class="hint" style="display:inline;">(dd/mm/yyyy, nếu có)</span></label>
+    <input type="text" id="ngaySinhKH" placeholder="dd/mm/yyyy" inputmode="numeric" maxlength="10">
+    <div class="hint" id="ngaySinhErr" style="color:var(--danger);display:none;">Ngày sinh không hợp lệ, nhập theo định dạng dd/mm/yyyy</div>
 
     <label>Hình thức *</label>
     <select id="hinhThuc" required>
@@ -85,8 +96,17 @@
     <input type="email" id="emailPIC" required placeholder="ban@onelab.vn">
     <div class="hint">Email này sẽ nhận thông báo khi booking bị từ chối hoặc hoàn tất.</div>
 
+    <label>Hình thức trả kết quả *</label>
+    <select id="hinhThucTraKQ" required>
+      <option value="">-- Chọn --</option>
+      <option>Zalo khách hàng</option>
+      <option>Email khách hàng</option>
+      <option>Email bác sĩ</option>
+    </select>
+
     <label>Mã bác sĩ <span class="hint" style="display:inline;">(nếu có)</span></label>
     <input type="text" id="maBacSi" placeholder="VD: 0426_0006">
+    <div class="hint" id="maBacSiErr" style="color:var(--danger);display:none;">Định dạng mã bác sĩ phải dạng số_số, VD: 0421_0000</div>
 
     <label>Ghi chú <span class="hint" style="display:inline;">(nếu có)</span></label>
     <textarea id="ghiChuSale" rows="2" placeholder="VD: Khách đang trong tình trạng khẩn cấp, BS chỉ định phải lấy mẫu trước 7h sáng"></textarea>
@@ -191,6 +211,15 @@ ngayHenInput.addEventListener('input', (e) => {
   if (v.length >= 5) v = v.slice(0, 2) + '/' + v.slice(2, 4) + '/' + v.slice(4);
   else if (v.length >= 3) v = v.slice(0, 2) + '/' + v.slice(2);
   e.target.value = v;
+  updateKhungGioLock();
+});
+
+const ngaySinhInput = document.getElementById('ngaySinhKH');
+ngaySinhInput.addEventListener('input', (e) => {
+  let v = e.target.value.replace(/\D/g, '').slice(0, 8);
+  if (v.length >= 5) v = v.slice(0, 2) + '/' + v.slice(2, 4) + '/' + v.slice(4);
+  else if (v.length >= 3) v = v.slice(0, 2) + '/' + v.slice(2);
+  e.target.value = v;
 });
 
 function isValidDDMMYYYY(str) {
@@ -201,6 +230,40 @@ function isValidDDMMYYYY(str) {
   const daysInMonth = new Date(y, mo, 0).getDate();
   return d >= 1 && d <= daysInMonth;
 }
+
+// Khoá (disable) các khung giờ đã qua nếu Ngày hẹn = hôm nay; nếu Ngày hẹn là ngày quá khứ, khoá hết
+function updateKhungGioLock() {
+  const khungGioSel = document.getElementById('khungGio');
+  const val = ngayHenInput.value.trim();
+  Array.from(khungGioSel.options).forEach(opt => { opt.disabled = false; });
+  if (!isValidDDMMYYYY(val)) return;
+
+  const [d, mo, y] = val.split('/').map(Number);
+  const chosenDate = new Date(y, mo - 1, d);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  if (chosenDate.getTime() < today.getTime()) {
+    // Ngày đã qua -> khoá hết khung giờ
+    Array.from(khungGioSel.options).forEach(opt => { if (opt.value) opt.disabled = true; });
+    if (khungGioSel.selectedOptions[0] && khungGioSel.selectedOptions[0].disabled) khungGioSel.value = '';
+    return;
+  }
+  if (chosenDate.getTime() === today.getTime()) {
+    const curHour = now.getHours(), curMin = now.getMinutes();
+    Array.from(khungGioSel.options).forEach(opt => {
+      if (!opt.value) return;
+      const m = opt.value.match(/^(\d{2}):(\d{2})/);
+      if (!m) return;
+      const slotStartHour = Number(m[1]), slotStartMin = Number(m[2]);
+      if (slotStartHour < curHour || (slotStartHour === curHour && slotStartMin <= curMin)) opt.disabled = true;
+    });
+    if (khungGioSel.selectedOptions[0] && khungGioSel.selectedOptions[0].disabled) khungGioSel.value = '';
+  }
+}
+
+let editMode = false;
+let editCode = '';
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -213,6 +276,30 @@ form.addEventListener('submit', async (e) => {
   }
   ngayHenErr.style.display = 'none';
 
+  const ngaySinhErr = document.getElementById('ngaySinhErr');
+  const ngaySinhVal = ngaySinhInput.value.trim();
+  if (ngaySinhVal && !isValidDDMMYYYY(ngaySinhVal)) {
+    ngaySinhErr.style.display = 'block';
+    ngaySinhInput.focus();
+    return;
+  }
+  ngaySinhErr.style.display = 'none';
+
+  const maBacSiErr = document.getElementById('maBacSiErr');
+  const maBacSiVal = document.getElementById('maBacSi').value.trim();
+  if (maBacSiVal && !/^\d{4}_\d{4}$/.test(maBacSiVal)) {
+    maBacSiErr.style.display = 'block';
+    document.getElementById('maBacSi').focus();
+    return;
+  }
+  maBacSiErr.style.display = 'none';
+
+  const khungGioSel = document.getElementById('khungGio');
+  if (khungGioSel.selectedOptions[0] && khungGioSel.selectedOptions[0].disabled) {
+    msg.innerHTML = `<div class="msg err">Khung giờ đã chọn đã qua, vui lòng chọn lại.</div>`;
+    return;
+  }
+
   const dichVuValue = getSelectedTests();
   if (!dichVuValue) {
     msg.innerHTML = `<div class="msg err">Vui lòng chọn ít nhất 1 xét nghiệm hoặc điền vào ô "Xét nghiệm khác".</div>`;
@@ -220,7 +307,7 @@ form.addEventListener('submit', async (e) => {
   }
 
   submitBtn.disabled = true;
-  submitBtn.textContent = 'Đang gửi...';
+  submitBtn.textContent = editMode ? 'Đang cập nhật...' : 'Đang gửi...';
   msg.innerHTML = '';
 
   try {
@@ -237,15 +324,30 @@ form.addEventListener('submit', async (e) => {
       tenKH: document.getElementById('tenKH').value,
       sdt: document.getElementById('sdt').value,
       diaChi: document.getElementById('diaChi').value,
+      ngaySinh: ngaySinhVal,
       hinhThuc: document.getElementById('hinhThuc').value,
       dichVu: dichVuValue,
       ngayHen: document.getElementById('ngayHen').value,
       khungGio: document.getElementById('khungGio').value,
       mucUuTien: mucUuTien,
       emailPIC: document.getElementById('emailPIC').value,
-      maBacSi: document.getElementById('maBacSi').value.trim(),
+      hinhThucTraKQ: document.getElementById('hinhThucTraKQ').value,
+      maBacSi: maBacSiVal,
       ghiChuSale: document.getElementById('ghiChuSale').value.trim()
     };
+
+    if (editMode) {
+      const res = await callApi('updateBooking', Object.assign({}, info, { maBooking: editCode }));
+      if (res.ok) {
+        msg.innerHTML = `<div class="msg ok">${res.message}</div>`;
+        submitBtn.textContent = 'Đã cập nhật ✓';
+      } else {
+        msg.innerHTML = `<div class="msg err">Lỗi: ${res.error}</div>`;
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Cập nhật yêu cầu';
+      }
+      return;
+    }
 
     const res = await callApi('createBooking', Object.assign({}, info, { files: JSON.stringify(files) }));
 
@@ -259,9 +361,66 @@ form.addEventListener('submit', async (e) => {
     msg.innerHTML = `<div class="msg err">Không gửi được, vui lòng thử lại. (${err})</div>`;
   } finally {
     submitBtn.disabled = false;
-    submitBtn.textContent = 'Gửi yêu cầu';
+    if (!editMode) submitBtn.textContent = 'Gửi yêu cầu';
   }
 });
+
+// ===== CHẾ ĐỘ CHỈNH SỬA (link từ email Từ chối: sales.html?edit=MÃ) =====
+(async function initEditMode() {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('edit');
+  if (!code) return;
+
+  const res = await callApi('lookupBooking', { maBooking: code });
+  if (!res.ok || res.data.length === 0) {
+    msg.innerHTML = `<div class="msg err">Không tìm thấy booking ${code} để chỉnh sửa.</div>`;
+    return;
+  }
+  const b = res.data[0];
+  if (Number(b.trangThai) !== 0) {
+    msg.innerHTML = `<div class="msg err">Booking ${code} hiện không ở trạng thái Từ chối nên không thể chỉnh sửa qua link này.</div>`;
+    return;
+  }
+
+  editMode = true;
+  editCode = code;
+  document.getElementById('normalIntro').style.display = 'none';
+  document.getElementById('editIntro').style.display = 'block';
+  document.getElementById('editCode').textContent = code;
+  document.getElementById('editReason').textContent = b.lyDoTuChoi || '(không có)';
+  submitBtn.textContent = 'Cập nhật yêu cầu';
+
+  document.getElementById('tenKH').value = b.tenKH || '';
+  document.getElementById('sdt').value = b.sdt || '';
+  document.getElementById('diaChi').value = b.diaChi || '';
+  document.getElementById('ngaySinhKH').value = b.ngaySinh || '';
+  document.getElementById('hinhThuc').value = b.hinhThuc || '';
+  document.getElementById('ngayHen').value = b.ngayHen || '';
+  document.getElementById('khungGio').value = b.khungGio || '';
+  document.getElementById('emailPIC').value = b.emailPIC || '';
+  document.getElementById('hinhThucTraKQ').value = b.hinhThucTraKQ || '';
+  document.getElementById('maBacSi').value = b.maBacSi || '';
+  document.getElementById('ghiChuSale').value = b.ghiChu || '';
+  const priRadio = form.querySelector(`input[name=mucUuTien][value="${b.mucUuTien}"]`);
+  if (priRadio) priRadio.checked = true;
+  updateKhungGioLock();
+  if (b.khungGio) document.getElementById('khungGio').value = b.khungGio;
+
+  // Khớp lại xét nghiệm đã chọn trước đó với danh mục (chờ danh mục tải xong)
+  const tryRestoreTests = () => {
+    if (ALL_TESTS.length === 0) { setTimeout(tryRestoreTests, 300); return; }
+    const parts = (b.dichVu || '').split(',').map(s => s.trim()).filter(Boolean);
+    const unmatched = [];
+    parts.forEach(part => {
+      const found = ALL_TESTS.find(t => t.ten === part);
+      if (found && !selectedTests.includes(found.ten)) selectedTests.push(found.ten);
+      else if (!found) unmatched.push(part);
+    });
+    document.getElementById('dichVuKhac').value = unmatched.join(', ');
+    renderSelectedTests();
+  };
+  tryRestoreTests();
+})();
 
 function maskLast4(str) {
   const s = String(str || '');
@@ -297,6 +456,8 @@ function showConfirmation(res, info) {
       <div class="confirm-row"><span>Ngày hẹn</span><strong>${info.ngayHen} · ${info.khungGio}</strong></div>
       <div class="confirm-row"><span>Ưu tiên</span><strong>${info.mucUuTien}</strong></div>
       <div class="confirm-row"><span>Email nhận báo</span><strong>${info.emailPIC}</strong></div>
+      ${info.ngaySinh ? `<div class="confirm-row"><span>Ngày sinh KH</span><strong>${info.ngaySinh}</strong></div>` : ''}
+      ${info.hinhThucTraKQ ? `<div class="confirm-row"><span>Trả kết quả</span><strong>${info.hinhThucTraKQ}</strong></div>` : ''}
       ${info.maBacSi ? `<div class="confirm-row"><span>Mã bác sĩ</span><strong>${info.maBacSi}</strong></div>` : ''}
       ${info.ghiChuSale ? `<div class="confirm-row"><span>Ghi chú</span><strong>${info.ghiChuSale}</strong></div>` : ''}
     </div>

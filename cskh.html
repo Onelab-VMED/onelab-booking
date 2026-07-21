@@ -138,7 +138,7 @@ function itemHtml(b) {
       ${isPriority ? `<span class="badge st-0">${b.mucUuTien}</span>` : ''}
     </div>
     <div class="hint" style="margin-top:4px;">
-      ${b.tenKH} · ${b.sdt}<br>${b.diaChi}<br>${b.dichVu} · ${b.hinhThuc}<br>Hẹn: ${b.ngayHen} ${b.khungGio}<br>Tạo lúc: ${b.thoiGianTao}
+      ${b.tenKH}${b.ngaySinh ? ' (' + b.ngaySinh + ')' : ''} · ${b.sdt}<br>${b.diaChi}<br>${b.dichVu} · ${b.hinhThuc}<br>Hẹn: ${b.ngayHen} ${b.khungGio}<br>Trả KQ: ${b.hinhThucTraKQ || '—'}<br>Tạo lúc: ${b.thoiGianTao}
     </div>
     ${b.ghiChu ? `<div class="hint" style="margin-top:6px;font-style:italic;">Ghi chú Sale: ${b.ghiChu}</div>` : ''}
 

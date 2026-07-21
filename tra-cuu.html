@@ -119,6 +119,7 @@ function renderBooking(b) {
         <span class="badge st-${current}">${b.trangThaiLabel}</span>
       </div>
       <div class="hint" style="margin-top:6px;">${b.tenKH} · ${b.dichVu}${b.maBacSi ? ' · Mã BS: ' + b.maBacSi : ''}</div>
+      ${b.hinhThucTraKQ ? `<div class="hint">Trả kết quả: ${b.hinhThucTraKQ}</div>` : ''}
       ${b.ghiChu ? `<div class="hint" style="font-style:italic;">Ghi chú: ${b.ghiChu}</div>` : ''}
       <div class="steps">${stepsHtml}</div>
       ${renderBillLinks(b.billLinks)}
