@@ -123,11 +123,42 @@ function renderQueue(list) {
 }
 
 function itemHtml(b) {
+  const isPriority = b.mucUuTien && b.mucUuTien !== 'Thường';
+  const chiDinhList = (b.chiDinhLinks || '').split(',').map(s => s.trim()).filter(Boolean);
+  const billList = (b.billLinks || '').split(',').map(s => s.trim()).filter(Boolean);
   return `
-  <div class="card">
-    <strong>${b.maBooking}</strong>
-    <div class="hint" style="margin-top:4px;">${b.tenKH} · ${b.dichVu}<br>Bàn giao lúc: ${b.banGiao || '—'} (bởi ${b.nguoiBanGiao || '—'})</div>
-    <label>Mã PID</label>
+  <div class="card" style="${isPriority ? 'border-color:#C0392B;' : ''}">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <strong>${b.maBooking}</strong>
+      ${isPriority ? `<span class="badge st-0">${b.mucUuTien}</span>` : ''}
+    </div>
+
+    <div class="hint" style="margin-top:6px;">
+      <strong style="color:var(--text);">${b.tenKH}</strong> · ${b.sdt}<br>
+      ${b.diaChi}<br>
+      Hình thức: ${b.hinhThuc} · Hẹn: ${b.ngayHen} ${b.khungGio}
+    </div>
+
+    <div class="card mint" style="margin-top:10px;padding:10px 14px;">
+      <div class="hint" style="font-weight:700;color:var(--text);margin-bottom:4px;">Xét nghiệm / Chỉ số cần nhập</div>
+      <div style="font-size:13px;color:var(--text);">${b.dichVu || '—'}</div>
+    </div>
+
+    ${b.maBacSi ? `<div class="hint" style="margin-top:8px;">Mã bác sĩ: <strong style="color:var(--text);">${b.maBacSi}</strong></div>` : ''}
+    ${b.ghiChu ? `<div class="hint" style="margin-top:6px;font-style:italic;">Ghi chú Sale: ${b.ghiChu}</div>` : ''}
+
+    ${chiDinhList.length > 0 ? `
+      <div class="hint" style="margin-top:8px;">Ảnh phiếu chỉ định:
+        ${chiDinhList.map((l, i) => `<a href="${l}" target="_blank" rel="noopener">Ảnh ${i + 1}</a>`).join(' · ')}
+      </div>` : ''}
+    ${billList.length > 0 ? `
+      <div class="hint" style="margin-top:4px;">Hoá đơn/Bill:
+        ${billList.map((l, i) => `<a href="${l}" target="_blank" rel="noopener">File ${i + 1}</a>`).join(' · ')}
+      </div>` : ''}
+
+    <div class="hint" style="margin-top:8px;">Bàn giao lúc: ${b.banGiao || '—'} (bởi ${b.nguoiBanGiao || '—'})</div>
+
+    <label style="margin-top:12px;">Mã PID</label>
     <input type="text" id="pid-${b.maBooking}" placeholder="VD: 10231">
     <label>Mã SID</label>
     <input type="text" id="sid-${b.maBooking}" placeholder="VD: 55892">

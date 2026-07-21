@@ -36,8 +36,8 @@
     <label>Hình thức *</label>
     <select id="hinhThuc" required>
       <option value="">-- Chọn --</option>
-      <option>Lấy mẫu tận nhà</option>
-      <option>Thu mẫu tại phòng khám</option>
+      <option>Lấy mẫu</option>
+      <option>Thu mẫu</option>
     </select>
 
     <label>Dịch vụ / Xét nghiệm *</label>
@@ -85,11 +85,11 @@
     <input type="email" id="emailPIC" required placeholder="ban@onelab.vn">
     <div class="hint">Email này sẽ nhận thông báo khi booking bị từ chối hoặc hoàn tất.</div>
 
-    <label>Mã bác sĩ <span class="hint" style="display:inline;">(để tính hoa hồng, nếu có)</span></label>
+    <label>Mã bác sĩ <span class="hint" style="display:inline;">(nếu có)</span></label>
     <input type="text" id="maBacSi" placeholder="VD: 0426_0006">
 
     <label>Ghi chú <span class="hint" style="display:inline;">(nếu có)</span></label>
-    <textarea id="ghiChuSale" rows="2" placeholder="VD: Khách yêu cầu gọi trước 15 phút, nhà có chó dữ..."></textarea>
+    <textarea id="ghiChuSale" rows="2" placeholder="VD: Khách đang trong tình trạng khẩn cấp, BS chỉ định phải lấy mẫu trước 7h sáng"></textarea>
 
     <button type="submit" class="btn" id="submitBtn">Gửi yêu cầu</button>
     <div id="msg"></div>
@@ -263,6 +263,12 @@ form.addEventListener('submit', async (e) => {
   }
 });
 
+function maskLast4(str) {
+  const s = String(str || '');
+  if (s.length <= 4) return s;
+  return 'xxxx' + s.slice(-4);
+}
+
 function showConfirmation(res, info) {
   form.style.display = 'none';
   const c = document.getElementById('confirmScreen');
@@ -276,14 +282,15 @@ function showConfirmation(res, info) {
 
     <div class="card" style="text-align:center;">
       <div class="hint">Mã booking</div>
-      <div style="font-family:Cambria,serif;font-size:26px;font-weight:700;color:var(--green-dark);letter-spacing:0.02em;margin:4px 0 10px;">${res.maBooking}</div>
+      <div style="font-family:Cambria,serif;font-size:26px;font-weight:700;color:var(--green-dark);letter-spacing:0.02em;margin:4px 0 10px;">${maskLast4(res.maBooking)}</div>
       <span class="badge st-1">${res.trangThai}</span>
+      <div class="hint" style="margin-top:8px;">Đã ẩn bớt để bảo mật — mã đầy đủ đã gửi qua email, bấm nút bên dưới vẫn tra cứu được bình thường.</div>
     </div>
 
     <div class="card">
       <div class="hint" style="margin-bottom:8px;font-weight:700;color:var(--text);">Thông tin đã gửi</div>
-      <div class="confirm-row"><span>Khách hàng</span><strong>${info.tenKH}</strong></div>
-      <div class="confirm-row"><span>SĐT</span><strong>${info.sdt}</strong></div>
+      <div class="confirm-row"><span>Khách hàng</span><strong>${maskLast4(info.tenKH)}</strong></div>
+      <div class="confirm-row"><span>SĐT</span><strong>${maskLast4(info.sdt)}</strong></div>
       <div class="confirm-row"><span>Địa chỉ</span><strong>${info.diaChi}</strong></div>
       <div class="confirm-row"><span>Hình thức</span><strong>${info.hinhThuc}</strong></div>
       <div class="confirm-row"><span>Dịch vụ</span><strong>${info.dichVu}</strong></div>
