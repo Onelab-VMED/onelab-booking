@@ -19,10 +19,17 @@
   <div class="card" id="pinCard">
     <label class="first">Mã PIN Điều dưỡng</label>
     <input type="password" id="pin" inputmode="numeric" placeholder="••••">
+    <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-top:10px;">
+      <input type="checkbox" id="rememberMe" checked style="width:auto;">
+      <span>Ghi nhớ trên máy này (mở lên là vào thẳng danh sách, không cần gõ lại PIN)</span>
+    </label>
     <button class="btn" id="loadBtn">Vào danh sách</button>
     <div id="loginMsg"></div>
   </div>
 
+  <div id="switchUserBox" style="display:none;text-align:right;margin-bottom:10px;">
+    <a href="#" onclick="logoutNurse(); return false;" style="font-size:12.5px;color:var(--muted);">Không phải bạn? Đổi người dùng khác</a>
+  </div>
   <div id="queue"></div>
 </div>
 
@@ -31,13 +38,41 @@
 let PIN = '';
 let knownCodes = new Set();
 let pollTimer = null;
+const STORAGE_KEY = 'onelab_dieuduong_pin';
 const NEXT_STEP = {
   3: { step: 'tiepnhan', label: 'Tiếp nhận đơn, đi lấy mẫu' },
   4: { step: 'daylaymau', label: 'Đã lấy mẫu xong' },
   5: { step: 'bangiao', label: 'Đã bàn giao mẫu cho Logistics' }
 };
 
-document.getElementById('loadBtn').addEventListener('click', () => loadQueue(true));
+document.getElementById('loadBtn').addEventListener('click', () => {
+  const remember = document.getElementById('rememberMe').checked;
+  if (remember) localStorage.setItem(STORAGE_KEY, document.getElementById('pin').value.trim());
+  else localStorage.removeItem(STORAGE_KEY);
+  loadQueue(true);
+});
+
+function logoutNurse() {
+  localStorage.removeItem(STORAGE_KEY);
+  PIN = '';
+  if (pollTimer) clearInterval(pollTimer);
+  document.getElementById('pin').value = '';
+  document.getElementById('pinCard').style.display = 'block';
+  document.getElementById('switchUserBox').style.display = 'none';
+  document.getElementById('queue').innerHTML = '';
+  document.getElementById('countBadge').style.display = 'none';
+}
+
+// Tự động vào danh sách nếu đã lưu PIN trên máy này trước đó
+(function autoLogin() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    document.getElementById('pin').value = saved;
+    document.getElementById('pinCard').style.display = 'none';
+    document.getElementById('switchUserBox').style.display = 'block';
+    loadQueue(true);
+  }
+})();
 
 async function loadQueue(isFirstLoad) {
   PIN = document.getElementById('pin').value.trim();
@@ -48,6 +83,8 @@ async function loadQueue(isFirstLoad) {
   const res = await callApi('listQueue', { role: 'dieuduong', pin: PIN });
   if (!res.ok) {
     loginMsg.innerHTML = `<div class="msg err">${res.error}</div>`;
+    document.getElementById('pinCard').style.display = 'block'; // PIN lưu bị sai -> hiện lại form nhập
+    document.getElementById('switchUserBox').style.display = 'none';
     return;
   }
   loginMsg.innerHTML = `<div class="msg ok">Xin chào ${res.who}</div>`;

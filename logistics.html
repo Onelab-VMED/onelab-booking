@@ -32,6 +32,21 @@ let PIN = '';
 let knownCodes = new Set();
 let pollTimer = null;
 
+async function showPublicCount() {
+  try {
+    const res = await callApi('getPublicCount', { role: 'logistics' });
+    const badge = document.getElementById('countBadge');
+    if (res.ok && res.count > 0) {
+      badge.style.display = 'inline-block';
+      badge.textContent = String(res.count).padStart(2, '0');
+    } else {
+      badge.style.display = 'none';
+    }
+  } catch (e) {}
+}
+showPublicCount();
+let publicCountTimer = setInterval(showPublicCount, 20000);
+
 document.getElementById('loadBtn').addEventListener('click', () => loadQueue(true));
 
 async function loadQueue(isFirstLoad) {
@@ -50,6 +65,7 @@ async function loadQueue(isFirstLoad) {
   renderQueue(res.data);
 
   if (isFirstLoad) {
+    if (publicCountTimer) clearInterval(publicCountTimer);
     if (pollTimer) clearInterval(pollTimer);
     pollTimer = setInterval(() => loadQueue(false), 20000);
     if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();

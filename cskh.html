@@ -33,6 +33,22 @@ let NURSES = [];
 let knownCodes = new Set();
 let pollTimer = null;
 
+// Hiện số lượng ngay khi mở trang, chưa cần nhập PIN
+async function showPublicCount() {
+  try {
+    const res = await callApi('getPublicCount', { role: 'cskh' });
+    const badge = document.getElementById('countBadge');
+    if (res.ok && res.count > 0) {
+      badge.style.display = 'inline-block';
+      badge.textContent = String(res.count).padStart(2, '0');
+    } else {
+      badge.style.display = 'none';
+    }
+  } catch (e) {}
+}
+showPublicCount();
+let publicCountTimer = setInterval(showPublicCount, 20000); // cập nhật số ngay cả khi chưa đăng nhập
+
 document.getElementById('loadBtn').addEventListener('click', () => loadQueue(true));
 
 async function loadQueue(isFirstLoad) {
@@ -55,6 +71,7 @@ async function loadQueue(isFirstLoad) {
   renderQueue(res.data);
 
   if (isFirstLoad) {
+    if (publicCountTimer) clearInterval(publicCountTimer);
     if (pollTimer) clearInterval(pollTimer);
     pollTimer = setInterval(() => loadQueue(false), 20000); // tự kiểm tra mỗi 20 giây
     if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
