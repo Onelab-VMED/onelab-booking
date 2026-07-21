@@ -12,7 +12,7 @@
     <div class="logo-dot">OL</div>
     <div>
       <div class="brandname">ONELAB</div>
-      <div class="pagetitle">CSKH — Duyệt &amp; điều phối</div>
+      <div class="pagetitle">CSKH — Duyệt &amp; điều phối <span id="countBadge" style="display:none;background:var(--danger);color:#fff;border-radius:999px;padding:2px 9px;font-size:13px;vertical-align:middle;"></span></div>
     </div>
   </div>
 
@@ -91,6 +91,13 @@ function playBeep() {
 
 function renderQueue(list) {
   const q = document.getElementById('queue');
+  const badge = document.getElementById('countBadge');
+  if (list.length > 0) {
+    badge.style.display = 'inline-block';
+    badge.textContent = String(list.length).padStart(2, '0');
+  } else {
+    badge.style.display = 'none';
+  }
   if (list.length === 0) {
     q.innerHTML = '<div class="card mint">Không có booking nào đang chờ xử lý. 🎉</div>';
     return;
@@ -126,8 +133,26 @@ function itemHtml(b) {
       </select>
       <button class="btn" onclick="assign('${b.maBooking}')">Điều phối</button>
     `}
+
+    <label style="margin-top:16px;">Hoá đơn / Bill (để Sales xem khi tra cứu)</label>
+    ${b.billLinks ? `<div class="hint">Đã có ${b.billLinks.split(',').length} file — <a href="#" onclick="event.preventDefault(); alert('${b.billLinks.replace(/'/g, "")}')">xem link</a></div>` : ''}
+    <input type="file" id="bill-${b.maBooking}" accept="image/*,.pdf" multiple>
+    <button class="btn secondary" onclick="uploadBill('${b.maBooking}')">Tải hoá đơn lên</button>
     <div id="msg-${b.maBooking}"></div>
   </div>`;
+}
+
+async function uploadBill(code) {
+  const filesInput = document.getElementById('bill-' + code).files;
+  if (filesInput.length === 0) return;
+  const files = [];
+  for (let i = 0; i < Math.min(filesInput.length, 3); i++) {
+    const f = filesInput[i];
+    files.push({ name: f.name, mime: f.type || 'application/octet-stream', base64: await fileToBase64(f) });
+  }
+  const res = await callApi('uploadBill', { maBooking: code, pin: PIN, files: JSON.stringify(files) });
+  showMsg(code, res);
+  if (res.ok) loadQueue();
 }
 
 async function approve(code) {

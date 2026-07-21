@@ -120,7 +120,18 @@ function renderBooking(b) {
       </div>
       <div class="hint" style="margin-top:6px;">${b.tenKH} · ${b.dichVu}</div>
       <div class="steps">${stepsHtml}</div>
+      ${renderBillLinks(b.billLinks)}
     </div>`;
+}
+
+function renderBillLinks(billLinks) {
+  if (!billLinks) return '';
+  const links = billLinks.split(',').map(s => s.trim()).filter(Boolean);
+  if (links.length === 0) return '';
+  return `<div class="card mint" style="margin-top:10px;">
+    <div class="hint" style="font-weight:700;color:var(--text);margin-bottom:6px;">Hoá đơn / Bill đính kèm</div>
+    ${links.map((l, i) => `<div><a href="${l}" target="_blank" rel="noopener">Xem hoá đơn ${i + 1}</a></div>`).join('')}
+  </div>`;
 }
 </script>
 </body>

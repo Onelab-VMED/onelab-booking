@@ -12,7 +12,7 @@
     <div class="logo-dot">OL</div>
     <div>
       <div class="brandname">ONELAB</div>
-      <div class="pagetitle">Điều dưỡng — Lấy mẫu</div>
+      <div class="pagetitle">Điều dưỡng — Lấy mẫu <span id="countBadge" style="display:none;background:var(--danger);color:#fff;border-radius:999px;padding:2px 9px;font-size:13px;vertical-align:middle;"></span></div>
     </div>
   </div>
 
@@ -91,6 +91,13 @@ function playBeep() {
 
 function renderQueue(list) {
   const q = document.getElementById('queue');
+  const badge = document.getElementById('countBadge');
+  if (list.length > 0) {
+    badge.style.display = 'inline-block';
+    badge.textContent = String(list.length).padStart(2, '0');
+  } else {
+    badge.style.display = 'none';
+  }
   if (list.length === 0) {
     q.innerHTML = '<div class="card mint">Không có booking nào được giao. 🎉</div>';
     return;

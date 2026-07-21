@@ -40,8 +40,11 @@
       <option>Thu mẫu tại phòng khám</option>
     </select>
 
-    <label>Dịch vụ *</label>
-    <input type="text" id="dichVu" required placeholder="VD: Gói tầm soát cơ bản, Xét nghiệm máu tổng quát...">
+    <label>Dịch vụ / Xét nghiệm *</label>
+    <div class="card mint" id="testListBox" style="max-height:220px;overflow-y:auto;padding:10px 14px;">
+      <div class="hint">Đang tải danh mục xét nghiệm...</div>
+    </div>
+    <input type="text" id="dichVuKhac" placeholder="Xét nghiệm khác (nếu không có trong danh sách)" style="margin-top:8px;">
 
     <label>Ngày hẹn * <span class="hint" style="display:inline;">(dd/mm/yyyy)</span></label>
     <input type="text" id="ngayHen" required placeholder="dd/mm/yyyy" inputmode="numeric" maxlength="10">
@@ -92,6 +95,32 @@ const form = document.getElementById('bookingForm');
 const msg = document.getElementById('msg');
 const submitBtn = document.getElementById('submitBtn');
 
+// Tải danh mục xét nghiệm để Sales chọn (thay vì gõ tay)
+(async function loadTests() {
+  const box = document.getElementById('testListBox');
+  try {
+    const res = await callApi('listTests', {});
+    if (res.ok && res.data.length > 0) {
+      box.innerHTML = res.data.map(t => `
+        <label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-weight:400;margin:0;">
+          <input type="checkbox" class="test-check" value="${t.ten}" style="width:auto;">
+          <span>${t.ten}</span>
+        </label>`).join('');
+    } else {
+      box.innerHTML = '<div class="hint">Chưa có danh mục — dùng ô "Xét nghiệm khác" bên dưới.</div>';
+    }
+  } catch (e) {
+    box.innerHTML = '<div class="hint">Không tải được danh mục — dùng ô "Xét nghiệm khác" bên dưới.</div>';
+  }
+})();
+
+function getSelectedTests() {
+  const checked = Array.from(document.querySelectorAll('.test-check:checked')).map(el => el.value);
+  const khac = document.getElementById('dichVuKhac').value.trim();
+  if (khac) checked.push(khac);
+  return checked.join(', ');
+}
+
 // Tự động chèn dấu "/" khi gõ ngày dd/mm/yyyy
 const ngayHenInput = document.getElementById('ngayHen');
 ngayHenInput.addEventListener('input', (e) => {
@@ -121,6 +150,12 @@ form.addEventListener('submit', async (e) => {
   }
   ngayHenErr.style.display = 'none';
 
+  const dichVuValue = getSelectedTests();
+  if (!dichVuValue) {
+    msg.innerHTML = `<div class="msg err">Vui lòng chọn ít nhất 1 xét nghiệm hoặc điền vào ô "Xét nghiệm khác".</div>`;
+    return;
+  }
+
   submitBtn.disabled = true;
   submitBtn.textContent = 'Đang gửi...';
   msg.innerHTML = '';
@@ -140,7 +175,7 @@ form.addEventListener('submit', async (e) => {
       sdt: document.getElementById('sdt').value,
       diaChi: document.getElementById('diaChi').value,
       hinhThuc: document.getElementById('hinhThuc').value,
-      dichVu: document.getElementById('dichVu').value,
+      dichVu: dichVuValue,
       ngayHen: document.getElementById('ngayHen').value,
       khungGio: document.getElementById('khungGio').value,
       mucUuTien: mucUuTien,
