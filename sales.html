@@ -41,10 +41,13 @@
     </select>
 
     <label>Dịch vụ / Xét nghiệm *</label>
-    <div class="card mint" id="testListBox" style="max-height:220px;overflow-y:auto;padding:10px 14px;">
-      <div class="hint">Đang tải danh mục xét nghiệm...</div>
+    <div style="position:relative;">
+      <input type="text" id="testSearch" placeholder="Gõ tên xét nghiệm để tìm..." autocomplete="off">
+      <div id="testSuggestions" class="test-suggestions"></div>
     </div>
-    <input type="text" id="dichVuKhac" placeholder="Xét nghiệm khác (nếu không có trong danh sách)" style="margin-top:8px;">
+    <div id="selectedTestsBox" class="selected-tests"></div>
+    <div id="totalGiaBox" class="hint" style="color:var(--green-dark);font-weight:700;margin-top:6px;"></div>
+    <input type="text" id="dichVuKhac" placeholder="Xét nghiệm khác (nếu không có trong danh mục)" style="margin-top:8px;">
 
     <label>Ngày hẹn * <span class="hint" style="display:inline;">(dd/mm/yyyy)</span></label>
     <input type="text" id="ngayHen" required placeholder="dd/mm/yyyy" inputmode="numeric" maxlength="10">
@@ -91,34 +94,88 @@
 
 <script src="config.js"></script>
 <script>
+// Tải danh mục xét nghiệm để Sales gõ-tìm-chọn (thay vì cuộn danh sách dài)
 const form = document.getElementById('bookingForm');
 const msg = document.getElementById('msg');
 const submitBtn = document.getElementById('submitBtn');
+let ALL_TESTS = []; // [{ten, gia}]
+let TEST_GIA_MAP = {}; // ten -> gia
+let selectedTests = [];
 
-// Tải danh mục xét nghiệm để Sales chọn (thay vì gõ tay)
 (async function loadTests() {
-  const box = document.getElementById('testListBox');
   try {
     const res = await callApi('listTests', {});
-    if (res.ok && res.data.length > 0) {
-      box.innerHTML = res.data.map(t => `
-        <label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-weight:400;margin:0;">
-          <input type="checkbox" class="test-check" value="${t.ten}" style="width:auto;">
-          <span>${t.ten}</span>
-        </label>`).join('');
-    } else {
-      box.innerHTML = '<div class="hint">Chưa có danh mục — dùng ô "Xét nghiệm khác" bên dưới.</div>';
-    }
-  } catch (e) {
-    box.innerHTML = '<div class="hint">Không tải được danh mục — dùng ô "Xét nghiệm khác" bên dưới.</div>';
-  }
+    ALL_TESTS = (res.ok && res.data.length > 0) ? res.data : [];
+    ALL_TESTS.forEach(t => { if (t.gia) TEST_GIA_MAP[t.ten] = t.gia; });
+  } catch (e) { ALL_TESTS = []; }
 })();
 
+function formatGia(gia) {
+  const n = Number(gia);
+  if (!gia || isNaN(n)) return '';
+  return n.toLocaleString('en-US') + 'đ';
+}
+
+function stripAccents(s) {
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
+const testSearch = document.getElementById('testSearch');
+const testSuggestions = document.getElementById('testSuggestions');
+
+testSearch.addEventListener('input', () => {
+  const q = stripAccents(testSearch.value.trim());
+  if (!q) { testSuggestions.style.display = 'none'; return; }
+  const matches = ALL_TESTS.filter(t => stripAccents(t.ten).includes(q) && !selectedTests.includes(t.ten)).slice(0, 8);
+  if (matches.length === 0) {
+    testSuggestions.innerHTML = '<div class="suggestion-empty">Không tìm thấy — dùng ô "Xét nghiệm khác" bên dưới</div>';
+    testSuggestions.style.display = 'block';
+    return;
+  }
+  testSuggestions.innerHTML = matches.map(t => `
+    <div class="suggestion-item" onclick="pickTest('${t.ten.replace(/'/g, "\\'")}')">
+      <span>${t.ten}</span>${t.gia ? `<span class="suggestion-price">${formatGia(t.gia)}</span>` : ''}
+    </div>`).join('');
+  testSuggestions.style.display = 'block';
+});
+
+testSearch.addEventListener('focus', () => { if (testSearch.value.trim()) testSearch.dispatchEvent(new Event('input')); });
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#testSearch') && !e.target.closest('#testSuggestions')) testSuggestions.style.display = 'none';
+});
+
+function pickTest(name) {
+  if (!selectedTests.includes(name)) selectedTests.push(name);
+  testSearch.value = '';
+  testSuggestions.style.display = 'none';
+  renderSelectedTests();
+}
+
+function removeTest(name) {
+  selectedTests = selectedTests.filter(t => t !== name);
+  renderSelectedTests();
+}
+
+function renderSelectedTests() {
+  const box = document.getElementById('selectedTestsBox');
+  box.innerHTML = selectedTests.map(t => {
+    const gia = TEST_GIA_MAP[t] ? ` — ${formatGia(TEST_GIA_MAP[t])}` : '';
+    return `<span class="test-chip">${t}${gia}<span class="chip-x" onclick="removeTest('${t.replace(/'/g, "\\'")}')">×</span></span>`;
+  }).join('');
+  renderTotalGia();
+}
+
+function renderTotalGia() {
+  const totalBox = document.getElementById('totalGiaBox');
+  const total = selectedTests.reduce((sum, t) => sum + (Number(TEST_GIA_MAP[t]) || 0), 0);
+  totalBox.textContent = total > 0 ? `Tạm tính: ${total.toLocaleString('en-US')}đ` : '';
+}
+
 function getSelectedTests() {
-  const checked = Array.from(document.querySelectorAll('.test-check:checked')).map(el => el.value);
   const khac = document.getElementById('dichVuKhac').value.trim();
-  if (khac) checked.push(khac);
-  return checked.join(', ');
+  const all = selectedTests.slice();
+  if (khac) all.push(khac);
+  return all.join(', ');
 }
 
 // Tự động chèn dấu "/" khi gõ ngày dd/mm/yyyy

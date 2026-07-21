@@ -249,3 +249,74 @@ button.btn:disabled { opacity: 0.5; }
 .confirm-row:last-child { border-bottom: none; }
 .confirm-row span { color: var(--muted); flex-shrink: 0; }
 .confirm-row strong { text-align: right; font-weight: 600; }
+
+.test-suggestions {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0; right: 0;
+  background: #fff;
+  border: 1.5px solid var(--green-accent);
+  border-radius: 10px;
+  max-height: 220px;
+  overflow-y: auto;
+  z-index: 20;
+  box-shadow: 0 6px 18px rgba(27,107,58,0.15);
+}
+.suggestion-item {
+  padding: 10px 14px;
+  font-size: 13.5px;
+  color: var(--text);
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.suggestion-price {
+  color: var(--green-dark);
+  font-weight: 700;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.suggestion-item:last-child { border-bottom: none; }
+.suggestion-item:hover, .suggestion-item:active { background: var(--mint); }
+.suggestion-empty {
+  padding: 10px 14px;
+  font-size: 12.5px;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.selected-tests {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.test-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--mint);
+  color: var(--green-dark);
+  border-radius: 999px;
+  padding: 6px 8px 6px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.chip-x {
+  cursor: pointer;
+  font-weight: 700;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--green-dark);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  line-height: 1;
+}
+.chip-x:hover { background: var(--danger); }
