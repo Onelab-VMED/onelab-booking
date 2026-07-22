@@ -182,7 +182,7 @@ async function confirmReceive(code) {
   const res = await callApi('confirmThuMau', { maBooking: code, pin: PIN });
   const el = document.getElementById('msg-' + code);
   el.innerHTML = res.ok ? `<div class="msg ok">${res.message}</div>` : `<div class="msg err">${res.error}</div>`;
-  if (res.ok) loadQueue();
+  if (res.ok) setTimeout(loadQueue, 1400);
 }
 
 async function finish(code) {
@@ -191,7 +191,7 @@ async function finish(code) {
   const res = await callApi('enterSID', { maBooking: code, pin: PIN, maPID, maSID });
   const el = document.getElementById('msg-' + code);
   el.innerHTML = res.ok ? `<div class="msg ok">${res.message}</div>` : `<div class="msg err">${res.error}</div>`;
-  if (res.ok) loadQueue();
+  if (res.ok) setTimeout(loadQueue, 1400);
 }
 </script>
 </body>

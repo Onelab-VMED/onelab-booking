@@ -86,14 +86,16 @@ async function doSearch() {
 })();
 
 function renderBooking(b) {
+  const isThuMau0 = b.hinhThuc === 'Thu mẫu';
   const isRejected = Number(b.trangThai) === 0;
   if (isRejected) {
     return `
       <div class="card">
         <div class="top-row" style="display:flex;justify-content:space-between;">
-          <strong>${b.maBooking}</strong>
+          <span class="hinhthuc-tag ${isThuMau0 ? 'tag-thumau' : 'tag-laymau'}">${isThuMau0 ? 'THU MẪU' : 'LẤY MẪU'}</span>
           <span class="badge st-0">Từ chối</span>
         </div>
+        <div style="margin-top:8px;"><strong style="font-family:Cambria,serif;color:var(--green-dark);font-size:16px;">${b.maBooking}</strong></div>
         <div class="hint" style="margin-top:8px;">Lý do: ${b.lyDoTuChoi || '(không có)'}</div>
         <div class="hint">Vui lòng điều chỉnh thông tin và gửi form yêu cầu mới.</div>
       </div>`;
@@ -145,9 +147,10 @@ function renderBooking(b) {
   return `
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;">
-        <strong>${b.maBooking}</strong>
+        <span class="hinhthuc-tag ${isThuMau ? 'tag-thumau' : 'tag-laymau'}">${isThuMau ? 'THU MẪU' : 'LẤY MẪU'}</span>
         <span class="badge st-${current === 20 ? 1 : current === 21 ? 6 : current}">${b.trangThaiLabel}</span>
       </div>
+      <div style="margin-top:8px;"><strong style="font-family:Cambria,serif;color:var(--green-dark);font-size:16px;">${b.maBooking}</strong></div>
       <div class="hint" style="margin-top:6px;">${b.tenKH} · ${b.dichVu}${b.maBacSi ? ' · Mã BS: ' + b.maBacSi : ''}</div>
       ${b.hinhThucTraKQ ? `<div class="hint">Trả kết quả: ${b.hinhThucTraKQ}</div>` : ''}
       ${b.ghiChu ? `<div class="hint" style="font-style:italic;">Ghi chú: ${b.ghiChu}</div>` : ''}

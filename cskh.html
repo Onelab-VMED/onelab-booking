@@ -170,7 +170,11 @@ function itemHtml(b) {
 
 async function uploadBill(code) {
   const filesInput = document.getElementById('bill-' + code).files;
-  if (filesInput.length === 0) return;
+  if (filesInput.length === 0) {
+    showMsg(code, { ok: false, error: 'Vui lòng chọn ít nhất 1 file trước khi tải lên.' });
+    return;
+  }
+  showMsg(code, { ok: true, message: 'Đang tải hoá đơn lên...' });
   const files = [];
   for (let i = 0; i < Math.min(filesInput.length, 3); i++) {
     const f = filesInput[i];
@@ -178,14 +182,14 @@ async function uploadBill(code) {
   }
   const res = await callApi('uploadBill', { maBooking: code, pin: PIN, files: JSON.stringify(files) });
   showMsg(code, res);
-  if (res.ok) loadQueue();
+  if (res.ok) setTimeout(loadQueue, 1400); // đợi cho thấy thông báo thành công rồi mới làm mới danh sách
 }
 
 async function approve(code) {
   const eta = document.getElementById('eta-' + code).value;
   const res = await callApi('approveBooking', { maBooking: code, pin: PIN, thoiGianDuKien: eta });
   showMsg(code, res);
-  if (res.ok) loadQueue();
+  if (res.ok) setTimeout(loadQueue, 1400);
 }
 
 async function reject(code) {
@@ -193,14 +197,18 @@ async function reject(code) {
   if (lyDo === null) return;
   const res = await callApi('rejectBooking', { maBooking: code, pin: PIN, lyDo });
   showMsg(code, res);
-  if (res.ok) loadQueue();
+  if (res.ok) setTimeout(loadQueue, 1400);
 }
 
 async function assign(code) {
   const ten = document.getElementById('nurse-' + code).value;
+  if (!ten) {
+    showMsg(code, { ok: false, error: 'Vui lòng chọn tên điều dưỡng trước khi điều phối.' });
+    return;
+  }
   const res = await callApi('assignNurse', { maBooking: code, pin: PIN, tenDieuDuong: ten });
   showMsg(code, res);
-  if (res.ok) loadQueue();
+  if (res.ok) setTimeout(loadQueue, 1400);
 }
 
 function showMsg(code, res) {

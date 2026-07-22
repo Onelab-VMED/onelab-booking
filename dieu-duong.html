@@ -179,7 +179,7 @@ async function update(code, step) {
   const res = await callApi('nurseUpdate', { maBooking: code, pin: PIN, step });
   const el = document.getElementById('msg-' + code);
   el.innerHTML = res.ok ? `<div class="msg ok">${res.message}</div>` : `<div class="msg err">${res.error}</div>`;
-  if (res.ok) loadQueue();
+  if (res.ok) setTimeout(loadQueue, 1400);
 }
 </script>
 </body>

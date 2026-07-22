@@ -321,6 +321,17 @@ button.btn:disabled { opacity: 0.5; }
 }
 .chip-x:hover { background: var(--danger); }
 
+.hinhthuc-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+.tag-laymau { background: #E3F2FD; color: var(--hcm-blue); }
+.tag-thumau { background: #F3E8FD; color: #7B5EA7; }
+
 /* ===== MÀN HÌNH MÁY TÍNH (desktop) — phóng to chữ + mở rộng khung cho dễ đọc ===== */
 @media (min-width: 720px) {
   body { font-size: 17px; }
