@@ -140,9 +140,18 @@ let selectedTests = [];
   } catch (e) { ALL_TESTS = []; }
 })();
 
+// Ô Gia trong sheet có thể đang lưu dạng CHỮ (text) kèm dấu phẩy (VD "725,000") thay vì số thật
+// -> bóc tách hết ký tự không phải số trước khi parse, để đọc đúng dù ô là text hay số.
+function parseGiaNumber(gia) {
+  if (gia === null || gia === undefined || gia === '') return 0;
+  const cleaned = String(gia).replace(/[^\d.-]/g, '');
+  const n = Number(cleaned);
+  return isNaN(n) ? 0 : n;
+}
+
 function formatGia(gia) {
-  const n = Number(gia);
-  if (!gia || isNaN(n)) return '';
+  const n = parseGiaNumber(gia);
+  if (!n) return '';
   return n.toLocaleString('en-US') + 'đ';
 }
 
@@ -197,7 +206,7 @@ function renderSelectedTests() {
 
 function renderTotalGia() {
   const totalBox = document.getElementById('totalGiaBox');
-  const total = selectedTests.reduce((sum, t) => sum + (Number(TEST_GIA_MAP[t]) || 0), 0);
+  const total = selectedTests.reduce((sum, t) => sum + parseGiaNumber(TEST_GIA_MAP[t]), 0);
   totalBox.textContent = total > 0 ? `Tạm tính: ${total.toLocaleString('en-US')}đ` : '';
 }
 

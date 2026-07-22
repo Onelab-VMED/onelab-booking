@@ -154,16 +154,29 @@ function itemHtml(b) {
   const st = Number(b.trangThai);
   const next = NEXT_STEP[st];
   const billList = (b.billLinks || '').split(',').map(s => s.trim()).filter(Boolean);
+  const chiDinhList = (b.chiDinhLinks || '').split(',').map(s => s.trim()).filter(Boolean);
   return `
   <div class="card">
     <strong>${b.maBooking}</strong>
     <div class="hint" style="margin-top:4px;">
-      ${b.tenKH} · ${b.sdt}<br>${b.diaChi}<br>Hẹn: ${b.ngayHen} ${b.khungGio}<br>Dự kiến: ${b.thoiGianDuKien || '—'}<br>Điều phối lúc: ${b.t3DieuPhoi || '—'}
+      <strong style="color:var(--text);">${b.tenKH}</strong>${b.ngaySinh ? ' (' + b.ngaySinh + ')' : ''} · ${b.sdt}<br>
+      ${b.diaChi}<br>
+      Hẹn: ${b.ngayHen} ${b.khungGio}<br>Dự kiến: ${b.thoiGianDuKien || '—'}<br>Điều phối lúc: ${b.t3DieuPhoi || '—'}
     </div>
+
     <div class="card mint" style="margin-top:10px;padding:10px 14px;">
       <div class="hint" style="font-weight:700;color:var(--text);margin-bottom:4px;">Xét nghiệm cần chuẩn bị vật tư</div>
       <div style="font-size:13px;color:var(--text);">${b.dichVu || '—'}</div>
     </div>
+
+    ${b.maBacSi ? `<div class="hint" style="margin-top:8px;">Mã bác sĩ: <strong style="color:var(--text);">${b.maBacSi}</strong></div>` : ''}
+    ${b.hinhThucTraKQ ? `<div class="hint" style="margin-top:4px;">Trả KQ: <strong style="color:var(--text);">${b.hinhThucTraKQ}</strong>${b.emailKetQua ? ' — ' + b.emailKetQua : ''}</div>` : ''}
+
+    ${chiDinhList.length > 0 ? `
+      <div class="hint" style="margin-top:8px;">Ảnh phiếu chỉ định:
+        ${chiDinhList.map((l, i) => `<a href="${l}" target="_blank" rel="noopener">Ảnh ${i + 1}</a>`).join(' · ')}
+      </div>` : ''}
+
     ${billList.length > 0 ? `
       <div class="card" style="margin-top:8px;padding:10px 14px;border-color:var(--green-accent);">
         <div class="hint" style="font-weight:700;color:var(--text);margin-bottom:4px;">💵 Hoá đơn/Bill — thu tiền khách</div>
