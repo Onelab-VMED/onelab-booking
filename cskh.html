@@ -186,7 +186,12 @@ async function uploadBill(code) {
 }
 
 async function approve(code) {
-  const eta = document.getElementById('eta-' + code).value;
+  const eta = document.getElementById('eta-' + code).value.trim();
+  if (!eta) {
+    showMsg(code, { ok: false, error: 'Vui lòng nhập Thời gian dự kiến lấy mẫu trước khi Duyệt.' });
+    document.getElementById('eta-' + code).focus();
+    return;
+  }
   const res = await callApi('approveBooking', { maBooking: code, pin: PIN, thoiGianDuKien: eta });
   showMsg(code, res);
   if (res.ok) setTimeout(loadQueue, 1400);
