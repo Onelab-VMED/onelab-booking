@@ -183,13 +183,22 @@ function itemHtml(b) {
         ${billList.map((l, i) => `<div><a href="${l}" target="_blank" rel="noopener">Xem hoá đơn ${i + 1}</a></div>`).join('')}
       </div>` : ''}
     ${b.ghiChu ? `<div class="hint" style="margin-top:8px;font-style:italic;">Ghi chú Sale: ${b.ghiChu}</div>` : ''}
+    ${next && next.step === 'bangiao' ? `
+      <label style="margin-top:12px;">Số km thực tế đã di chuyển (nếu nhớ)</label>
+      <input type="number" id="km-${b.maBooking}" placeholder="VD: 8" min="0" step="0.1">
+    ` : ''}
     ${next ? `<button class="btn" onclick="update('${b.maBooking}','${next.step}')">${next.label}</button>` : ''}
     <div id="msg-${b.maBooking}"></div>
   </div>`;
 }
 
 async function update(code, step) {
-  const res = await callApi('nurseUpdate', { maBooking: code, pin: PIN, step });
+  const params = { maBooking: code, pin: PIN, step };
+  if (step === 'bangiao') {
+    const kmEl = document.getElementById('km-' + code);
+    if (kmEl && kmEl.value.trim()) params.kmThucTe = kmEl.value.trim();
+  }
+  const res = await callApi('nurseUpdate', params);
   const el = document.getElementById('msg-' + code);
   el.innerHTML = res.ok ? `<div class="msg ok">${res.message}</div>` : `<div class="msg err">${res.error}</div>`;
   if (res.ok) setTimeout(loadQueue, 1400);

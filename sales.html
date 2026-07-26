@@ -41,14 +41,13 @@
     <label>Địa chỉ (ghi rõ quận/huyện) *</label>
     <textarea id="diaChi" rows="2" required placeholder="Số nhà, đường, phường/xã, Quận/Huyện..."></textarea>
 
-    <label>Khoảng cách ước tính từ văn phòng đến điểm lấy mẫu *</label>
-    <select id="khoangCach" required>
-      <option value="">-- Chọn --</option>
+    <label>Khoảng cách ước tính từ văn phòng đến điểm lấy mẫu <span class="hint" style="display:inline;">(nếu biết, không bắt buộc)</span></label>
+    <select id="khoangCach">
+      <option value="">-- Không rõ / bỏ qua --</option>
       <option value="<10km">Dưới 10km</option>
       <option value="10-20km">10 – 20km</option>
       <option value=">20km">Trên 20km</option>
     </select>
-    <div class="hint">Dùng để điều phối đúng thời gian cam kết theo khoảng cách (xem lưu ý bên dưới).</div>
 
     <label>Ngày sinh khách hàng *</label>
     <input type="text" id="ngaySinhKH" placeholder="dd/mm/yyyy — hoặc chỉ năm sinh nếu không rõ ngày/tháng (VD: 1990)" inputmode="numeric" maxlength="10">
