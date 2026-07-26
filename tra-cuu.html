@@ -127,8 +127,8 @@ function renderBooking(b) {
       const cls = s.st < current ? 'done' : s.st === current ? 'current' : '';
       let meta = '';
       if (s.st === 1) meta = 'Lúc ' + (b.thoiGianTao || '—');
-      if (s.st === 2) meta = b.nguoiDuyet ? `${b.nguoiDuyet} · ${b.t2Duyet}${b.thoiGianDuKien ? ' · Dự kiến: ' + b.thoiGianDuKien : ''}` : '';
-      if (s.st === 3) meta = b.nguoiPhuTrach ? `Điều dưỡng: ${b.nguoiPhuTrach}${b.t3DieuPhoi ? ' · ' + b.t3DieuPhoi : ''}` : '';
+      if (s.st === 2) meta = b.nguoiDuyet ? `${b.nguoiDuyet} · ${b.t2Duyet}${b.thoiGianDuKien ? ` · <strong style="color:var(--green-dark);">Xác nhận lấy mẫu lúc: ${b.thoiGianDuKien}</strong>` : ''}` : '';
+      if (s.st === 3) meta = b.nguoiPhuTrach ? `<strong style="color:var(--green-dark);">Điều dưỡng phụ trách: ${b.nguoiPhuTrach}</strong>${b.t3DieuPhoi ? ' · ' + b.t3DieuPhoi : ''}` : '';
       if (s.st === 4) meta = b.nguoiTiepNhan ? `${b.nguoiTiepNhan} · ${b.tiepNhan}` : '';
       if (s.st === 5) meta = b.nguoiLayMau ? `${b.nguoiLayMau} · ${b.daLayMau}` : '';
       if (s.st === 6) meta = b.nguoiBanGiao ? `${b.nguoiBanGiao} · ${b.banGiao}` : '';

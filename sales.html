@@ -36,13 +36,14 @@
 
     <label>Số điện thoại *</label>
     <input type="tel" id="sdt" required placeholder="09xx xxx xxx">
+    <div class="hint" id="customerFoundHint" style="color:var(--green-dark);display:none;">✓ Đã tìm thấy thông tin khách hàng cũ, tự động điền các trường bên dưới (có thể chỉnh lại nếu cần).</div>
 
     <label>Địa chỉ (ghi rõ quận/huyện) *</label>
     <textarea id="diaChi" rows="2" required placeholder="Số nhà, đường, phường/xã, Quận/Huyện..."></textarea>
 
-    <label>Ngày sinh khách hàng <span class="hint" style="display:inline;">(dd/mm/yyyy, nếu có)</span></label>
-    <input type="text" id="ngaySinhKH" placeholder="dd/mm/yyyy" inputmode="numeric" maxlength="10">
-    <div class="hint" id="ngaySinhErr" style="color:var(--danger);display:none;">Ngày sinh không hợp lệ, nhập theo định dạng dd/mm/yyyy</div>
+    <label>Ngày sinh khách hàng *</label>
+    <input type="text" id="ngaySinhKH" placeholder="dd/mm/yyyy — hoặc chỉ năm sinh nếu không rõ ngày/tháng (VD: 1990)" inputmode="numeric" maxlength="10">
+    <div class="hint" id="ngaySinhErr" style="color:var(--danger);display:none;">Bắt buộc nhập ngày sinh — dd/mm/yyyy đầy đủ, hoặc ít nhất năm sinh (VD: 1990)</div>
 
     <label>Hình thức *</label>
     <select id="hinhThuc" required>
@@ -51,7 +52,7 @@
       <option>Thu mẫu</option>
     </select>
 
-    <label>Dịch vụ / Xét nghiệm *</label>
+    <label>Dịch vụ / Xét nghiệm</label>
     <div style="position:relative;">
       <input type="text" id="testSearch" placeholder="Gõ tên xét nghiệm để tìm..." autocomplete="off">
       <div id="testSuggestions" class="test-suggestions"></div>
@@ -230,8 +231,8 @@ ngayHenInput.addEventListener('input', (e) => {
 const ngaySinhInput = document.getElementById('ngaySinhKH');
 ngaySinhInput.addEventListener('input', (e) => {
   let v = e.target.value.replace(/\D/g, '').slice(0, 8);
-  if (v.length >= 5) v = v.slice(0, 2) + '/' + v.slice(2, 4) + '/' + v.slice(4);
-  else if (v.length >= 3) v = v.slice(0, 2) + '/' + v.slice(2);
+  // Chỉ tự chèn dấu "/" khi gõ quá 4 số (đang là ngày đầy đủ) — 4 số trở xuống giữ nguyên (có thể là năm sinh)
+  if (v.length > 4) v = v.slice(0, 2) + '/' + v.slice(2, 4) + '/' + v.slice(4);
   e.target.value = v;
 });
 
@@ -243,6 +244,43 @@ function isValidDDMMYYYY(str) {
   const daysInMonth = new Date(y, mo, 0).getDate();
   return d >= 1 && d <= daysInMonth;
 }
+
+// Ngày sinh: chấp nhận dd/mm/yyyy đầy đủ, HOẶC chỉ năm sinh (4 số) nếu không rõ ngày/tháng
+function isValidNgaySinh(str) {
+  if (/^\d{4}$/.test(str)) {
+    const y = Number(str);
+    return y >= 1900 && y <= new Date().getFullYear();
+  }
+  return isValidDDMMYYYY(str);
+}
+
+// Khách hàng cũ: khi Sale gõ xong SĐT (đủ số, rời khỏi ô), tự tra và điền lại thông tin đã có trước đó
+const sdtInput = document.getElementById('sdt');
+sdtInput.addEventListener('blur', async () => {
+  if (editMode) return; // đang ở chế độ sửa booking cũ, không ghi đè
+  const sdtVal = sdtInput.value.trim();
+  if (sdtVal.replace(/\D/g, '').length < 9) return;
+
+  try {
+    const res = await callApi('lookupCustomer', { sdt: sdtVal });
+    const hint = document.getElementById('customerFoundHint');
+    if (!res.ok || !res.found) { hint.style.display = 'none'; return; }
+
+    hint.style.display = 'block';
+    const fillIfEmpty = (id, val) => {
+      const el = document.getElementById(id);
+      if (el && !el.value.trim() && val) el.value = val;
+    };
+    fillIfEmpty('tenKH', res.tenKH);
+    fillIfEmpty('diaChi', res.diaChi);
+    fillIfEmpty('ngaySinhKH', res.ngaySinh);
+    fillIfEmpty('emailPIC', res.emailPIC);
+    fillIfEmpty('emailKetQua', res.emailKetQua);
+    fillIfEmpty('maBacSi', res.maBacSi);
+    const traKQSel = document.getElementById('hinhThucTraKQ');
+    if (traKQSel && !traKQSel.value && res.hinhThucTraKQ) traKQSel.value = res.hinhThucTraKQ;
+  } catch (e) { /* không chặn luồng nhập liệu nếu tra lỗi */ }
+});
 
 // Khoá (disable) các khung giờ đã qua nếu Ngày hẹn = hôm nay; nếu Ngày hẹn là ngày quá khứ, khoá hết
 function updateKhungGioLock() {
@@ -292,7 +330,7 @@ form.addEventListener('submit', async (e) => {
 
   const ngaySinhErr = document.getElementById('ngaySinhErr');
   const ngaySinhVal = ngaySinhInput.value.trim();
-  if (ngaySinhVal && !isValidDDMMYYYY(ngaySinhVal)) {
+  if (!ngaySinhVal || !isValidNgaySinh(ngaySinhVal)) {
     ngaySinhErr.style.display = 'block';
     ngaySinhInput.focus();
     return;
@@ -315,10 +353,6 @@ form.addEventListener('submit', async (e) => {
   }
 
   const dichVuValue = getSelectedTests();
-  if (!dichVuValue) {
-    msg.innerHTML = `<div class="msg err">Vui lòng chọn ít nhất 1 xét nghiệm hoặc điền vào ô "Xét nghiệm khác".</div>`;
-    return;
-  }
 
   submitBtn.disabled = true;
   submitBtn.textContent = editMode ? 'Đang cập nhật...' : 'Đang gửi...';
