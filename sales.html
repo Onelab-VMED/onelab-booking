@@ -41,14 +41,6 @@
     <label>Địa chỉ (ghi rõ quận/huyện) *</label>
     <textarea id="diaChi" rows="2" required placeholder="Số nhà, đường, phường/xã, Quận/Huyện..."></textarea>
 
-    <label>Khoảng cách ước tính từ văn phòng đến điểm lấy mẫu <span class="hint" style="display:inline;">(nếu biết, không bắt buộc)</span></label>
-    <select id="khoangCach">
-      <option value="">-- Không rõ / bỏ qua --</option>
-      <option value="<10km">Dưới 10km</option>
-      <option value="10-20km">10 – 20km</option>
-      <option value=">20km">Trên 20km</option>
-    </select>
-
     <label>Ngày sinh khách hàng *</label>
     <input type="text" id="ngaySinhKH" placeholder="dd/mm/yyyy — hoặc chỉ năm sinh nếu không rõ ngày/tháng (VD: 1990)" inputmode="numeric" maxlength="10">
     <div class="hint" id="ngaySinhErr" style="color:var(--danger);display:none;">Bắt buộc nhập ngày sinh — dd/mm/yyyy đầy đủ, hoặc ít nhất năm sinh (VD: 1990)</div>
@@ -391,7 +383,6 @@ form.addEventListener('submit', async (e) => {
       sdt: document.getElementById('sdt').value,
       diaChi: document.getElementById('diaChi').value,
       ngaySinh: normalizeNgaySinh(ngaySinhVal),
-      khoangCach: document.getElementById('khoangCach').value,
       hinhThuc: document.getElementById('hinhThuc').value,
       dichVu: dichVuValue,
       ngayHen: document.getElementById('ngayHen').value,
@@ -462,7 +453,6 @@ form.addEventListener('submit', async (e) => {
   document.getElementById('sdt').value = b.sdt || '';
   document.getElementById('diaChi').value = b.diaChi || '';
   document.getElementById('ngaySinhKH').value = b.ngaySinh || '';
-  document.getElementById('khoangCach').value = b.khoangCach || '';
   document.getElementById('hinhThuc').value = b.hinhThuc || '';
   document.getElementById('ngayHen').value = b.ngayHen || '';
   document.getElementById('khungGio').value = b.khungGio || '';
@@ -527,7 +517,6 @@ function showConfirmation(res, info) {
       <div class="confirm-row"><span>Ưu tiên</span><strong>${info.mucUuTien}</strong></div>
       <div class="confirm-row"><span>Email nhận báo</span><strong>${info.emailPIC}</strong></div>
       ${info.ngaySinh ? `<div class="confirm-row"><span>Ngày sinh KH</span><strong>${info.ngaySinh}</strong></div>` : ''}
-      ${info.khoangCach ? `<div class="confirm-row"><span>Khoảng cách</span><strong>${info.khoangCach}</strong></div>` : ''}
       ${info.hinhThucTraKQ ? `<div class="confirm-row"><span>Trả kết quả</span><strong>${info.hinhThucTraKQ}</strong></div>` : ''}
       ${info.emailKetQua ? `<div class="confirm-row"><span>Email nhận KQ</span><strong>${info.emailKetQua}</strong></div>` : ''}
       ${info.maBacSi ? `<div class="confirm-row"><span>Mã bác sĩ</span><strong>${info.maBacSi}</strong></div>` : ''}
