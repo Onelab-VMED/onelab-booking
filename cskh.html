@@ -112,7 +112,10 @@ function playBeep() {
   } catch (e) {}
 }
 
+let CURRENT_LIST = [];
+
 function renderQueue(list) {
+  CURRENT_LIST = list;
   const q = document.getElementById('queue');
   const badge = document.getElementById('countBadge');
   if (list.length > 0) {
@@ -126,6 +129,16 @@ function renderQueue(list) {
     return;
   }
   q.innerHTML = list.map(itemHtml).join('');
+}
+
+// Cập nhật 1 booking tại chỗ trên trình duyệt (không cần gọi lại server) — nhanh hơn nhiều so với loadQueue lại từ đầu
+function patchAndRerender(maBooking, patch) {
+  const idx = CURRENT_LIST.findIndex(b => b.maBooking === maBooking);
+  if (idx === -1) return;
+  Object.assign(CURRENT_LIST[idx], patch);
+  const st = Number(CURRENT_LIST[idx].trangThai);
+  if (st < 1 || st > 4) CURRENT_LIST.splice(idx, 1); // ra khỏi phạm vi CSKH xử lý (VD bị từ chối) -> bỏ khỏi danh sách
+  renderQueue(CURRENT_LIST);
 }
 
 function itemHtml(b) {
@@ -149,7 +162,7 @@ function itemHtml(b) {
       <label>Thời gian dự kiến lấy mẫu</label>
       <input type="text" id="eta-${b.maBooking}" placeholder="VD: 14:00 hôm nay">
       <div class="qbtn-row" style="margin-top:12px;">
-        <button class="btn" onclick="approve('${b.maBooking}')">Duyệt</button>
+        <button class="btn" onclick="approve('${b.maBooking}', this)">Duyệt</button>
         <button class="btn danger" onclick="reject('${b.maBooking}')">Từ chối</button>
       </div>
     ` : ''}
@@ -160,44 +173,82 @@ function itemHtml(b) {
         <option value="">-- Chọn điều dưỡng --</option>
         ${NURSES.map(n => `<option value="${n}">${n}</option>`).join('')}
       </select>
-      <button class="btn" onclick="assign('${b.maBooking}')">Điều phối ngay</button>
+      <button class="btn" onclick="assign('${b.maBooking}', this)">Điều phối ngay</button>
     ` : ''}
 
-    ${alreadyAssigned ? `<div class="hint" style="margin-top:6px;">Đã điều phối: <strong style="color:var(--text);">${b.nguoiPhuTrach || '—'}</strong></div>` : ''}
+    ${alreadyAssigned ? `
+      <div class="hint" style="margin-top:6px;">Đã điều phối: <strong style="color:var(--text);">${b.nguoiPhuTrach || '—'}</strong></div>
+      <details style="margin-top:8px;">
+        <summary style="cursor:pointer;font-size:13px;color:var(--muted);">Đổi điều dưỡng khác</summary>
+        <select id="renurse-${b.maBooking}" style="margin-top:8px;">
+          <option value="">-- Chọn điều dưỡng mới --</option>
+          ${NURSES.filter(n => n !== b.nguoiPhuTrach).map(n => `<option value="${n}">${n}</option>`).join('')}
+        </select>
+        <button class="btn danger" style="margin-top:8px;" onclick="reassign('${b.maBooking}')">Xác nhận đổi</button>
+      </details>
+    ` : ''}
     <div id="msg-${b.maBooking}"></div>
   </div>`;
 }
 
 
-async function approve(code) {
+async function approve(code, btn) {
   const eta = document.getElementById('eta-' + code).value.trim();
   if (!eta) {
     showMsg(code, { ok: false, error: 'Vui lòng nhập Thời gian dự kiến lấy mẫu trước khi Duyệt.' });
     document.getElementById('eta-' + code).focus();
     return;
   }
+  btn.disabled = true; btn.textContent = 'Đang duyệt...';
   const res = await callApi('approveBooking', { maBooking: code, pin: PIN, thoiGianDuKien: eta });
-  showMsg(code, res);
-  if (res.ok) setTimeout(loadQueue, 1400);
+  if (res.ok) {
+    patchAndRerender(code, { trangThai: 2, thoiGianDuKien: eta });
+  } else {
+    showMsg(code, res);
+    btn.disabled = false; btn.textContent = 'Duyệt';
+  }
 }
 
 async function reject(code) {
   const lyDo = prompt('Lý do từ chối:');
   if (lyDo === null) return;
   const res = await callApi('rejectBooking', { maBooking: code, pin: PIN, lyDo });
-  showMsg(code, res);
-  if (res.ok) setTimeout(loadQueue, 1400);
+  if (res.ok) {
+    patchAndRerender(code, { trangThai: 0 });
+  } else {
+    showMsg(code, res);
+  }
 }
 
-async function assign(code) {
+async function assign(code, btn) {
   const ten = document.getElementById('nurse-' + code).value;
   if (!ten) {
     showMsg(code, { ok: false, error: 'Vui lòng chọn tên điều dưỡng trước khi điều phối.' });
     return;
   }
+  btn.disabled = true; btn.textContent = 'Đang điều phối...';
   const res = await callApi('assignNurse', { maBooking: code, pin: PIN, tenDieuDuong: ten });
-  showMsg(code, res);
-  if (res.ok) setTimeout(loadQueue, 1400);
+  if (res.ok) {
+    patchAndRerender(code, { trangThai: 3, nguoiPhuTrach: ten });
+  } else {
+    showMsg(code, res);
+    btn.disabled = false; btn.textContent = 'Điều phối ngay';
+  }
+}
+
+async function reassign(code) {
+  const tenMoi = document.getElementById('renurse-' + code).value;
+  if (!tenMoi) {
+    showMsg(code, { ok: false, error: 'Vui lòng chọn điều dưỡng mới trước khi đổi.' });
+    return;
+  }
+  if (!confirm('Xác nhận đổi điều dưỡng phụ trách cho booking ' + code + '?')) return;
+  const res = await callApi('reassignNurse', { maBooking: code, pin: PIN, tenDieuDuongMoi: tenMoi });
+  if (res.ok) {
+    patchAndRerender(code, { trangThai: 3, nguoiPhuTrach: tenMoi });
+  } else {
+    showMsg(code, res);
+  }
 }
 
 function showMsg(code, res) {
